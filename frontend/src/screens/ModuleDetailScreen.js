@@ -306,6 +306,22 @@ function NewFlashcardForm({ moduleId, userId, onSave, onCancel }) {
 
 function ModuleDetailScreen({ moduleId, onBack, onNavigate, screens }) {
   const { user } = useAuth();
+
+  const handleStartVoiceQuiz = useCallback(() => {
+    if (onNavigate && screens?.VOICE_QUIZ) {
+      onNavigate(screens.VOICE_QUIZ, moduleId);
+    } else if (onNavigate) {
+      onNavigate('voice_quiz', moduleId);
+    }
+  }, [onNavigate, screens, moduleId]);
+
+  const handleStartImageQuiz = useCallback(() => {
+    if (onNavigate && screens?.IMAGE_QUIZ) {
+      onNavigate(screens.IMAGE_QUIZ, moduleId);
+    } else if (onNavigate) {
+      onNavigate('image_quiz', moduleId);
+    }
+  }, [onNavigate, screens, moduleId]);
   const [module, setModule] = useState(null);
   const [flashcards, setFlashcards] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -558,6 +574,7 @@ function ModuleDetailScreen({ moduleId, onBack, onNavigate, screens }) {
           theme="purple"
           disabled={flashcards.length === 0}
           opacity={flashcards.length === 0 ? 0.5 : 1}
+          onPress={handleStartVoiceQuiz}
         >
           Start Voice Quiz
         </Button>
@@ -567,6 +584,7 @@ function ModuleDetailScreen({ moduleId, onBack, onNavigate, screens }) {
           theme="purple"
           disabled={flashcards.length === 0}
           opacity={flashcards.length === 0 ? 0.5 : 1}
+          onPress={handleStartImageQuiz}
         >
           Start Image Quiz
         </Button>

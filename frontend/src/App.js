@@ -6,12 +6,16 @@ const AuthScreen = require('./screens/AuthScreen')
 const DashboardScreen = require('./screens/DashboardScreen')
 const UploadImageScreen = require('./screens/UploadImageScreen')
 const ModuleDetailScreen = require('./screens/ModuleDetailScreen')
+const ImageQuizScreen = require('./screens/ImageQuizScreen')
+const VoiceQuizScreen = require('./screens/VoiceQuizScreen')
 const useAuth = require('./hooks/useAuth')
 
 const SCREENS = {
   DASHBOARD: 'dashboard',
   UPLOAD_IMAGE: 'upload_image',
   MODULE_DETAIL: 'module_detail',
+  VOICE_QUIZ: 'voice_quiz',
+  IMAGE_QUIZ: 'image_quiz',
 }
 
 function AppContent() {
@@ -51,6 +55,28 @@ function AppContent() {
       <UploadImageScreen
         onBack={goBack}
         onSuccess={goBack}
+      />
+    )
+  }
+
+  if (currentScreen === SCREENS.VOICE_QUIZ && selectedModuleId) {
+    return (
+      <VoiceQuizScreen
+        moduleId={selectedModuleId}
+        onBack={goBack}
+        onNavigate={navigateTo}
+        screens={SCREENS}
+      />
+    )
+  }
+
+  if (currentScreen === SCREENS.IMAGE_QUIZ && selectedModuleId) {
+    return (
+      <ImageQuizScreen
+        moduleId={selectedModuleId}
+        onBack={goBack}
+        onNavigate={navigateTo}
+        screens={SCREENS}
       />
     )
   }

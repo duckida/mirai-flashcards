@@ -197,47 +197,47 @@ This document breaks down the AI Flashcard Quizzer specification into concrete, 
 ## Phase 7: Quiz Engine Core
 
 ### 7.1 Quiz Session Management
-- [ ] Create Firestore `quiz_sessions` collection schema
-- [ ] Implement quiz session creation endpoint
-- [ ] Implement quiz session state management
-- [ ] Create `/api/quiz/start` endpoint
-- [ ] Create `/api/quiz/:sessionId/end` endpoint
-- [ ] Implement session persistence and recovery
+- [x] Create Firestore `quiz_sessions` collection schema
+- [x] Implement quiz session creation endpoint
+- [x] Implement quiz session state management
+- [x] Create `/api/quiz/start` endpoint
+- [x] Create `/api/quiz/:sessionId/end` endpoint
+- [x] Implement session persistence and recovery
 
 ### 7.2 Flashcard Selection and Prioritization
-- [ ] Implement flashcard selection by knowledge score (ascending)
-- [ ] Create flashcard selection algorithm for quiz sessions
-- [ ] Implement configurable quiz size (number of cards)
-- [ ] Handle edge cases (empty modules, single card)
-- [ ] Implement randomization within score tiers
+- [x] Implement flashcard selection by knowledge score (ascending)
+- [x] Create flashcard selection algorithm for quiz sessions
+- [x] Implement configurable quiz size (number of cards)
+- [x] Handle edge cases (empty modules, single card)
+- [x] Implement randomization within score tiers
 
 ### 7.3 Exercise Type Generation
-- [ ] Implement free recall exercise generation
-- [ ] Implement multiple choice exercise generation
-- [ ] Implement fill-in-the-blank exercise generation
-- [ ] Create exercise variation logic
-- [ ] Implement exercise type distribution across session
+- [x] Implement free recall exercise generation
+- [x] Implement multiple choice exercise generation
+- [x] Implement fill-in-the-blank exercise generation
+- [x] Create exercise variation logic
+- [x] Implement exercise type distribution across session
 
 ### 7.4 Multiple Choice Question Generation
-- [ ] Implement correct answer selection
-- [ ] Implement distractor generation from other flashcards
-- [ ] Implement AI-based distractor generation for small modules
-- [ ] Ensure exactly 4 answer options per question
-- [ ] Implement answer option shuffling
+- [x] Implement correct answer selection
+- [x] Implement distractor generation from other flashcards
+- [x] Implement AI-based distractor generation for small modules
+- [x] Ensure exactly 4 answer options per question
+- [x] Implement answer option shuffling
 
 ### 7.5 Quiz Response Evaluation
-- [ ] Implement response evaluation logic
-- [ ] Create correctness determination algorithm
-- [ ] Implement score change calculation
-- [ ] Create feedback generation
-- [ ] Implement response persistence
+- [x] Implement response evaluation logic
+- [x] Create correctness determination algorithm
+- [x] Implement score change calculation
+- [x] Create feedback generation
+- [x] Implement response persistence
 
 ### 7.6 Quiz Session Endpoints
-- [ ] Create `/api/quiz/:sessionId/question` endpoint (GET)
-- [ ] Create `/api/quiz/:sessionId/answer` endpoint (POST)
-- [ ] Create `/api/quiz/:sessionId/summary` endpoint (GET)
-- [ ] Implement session state validation
-- [ ] Implement error handling for invalid operations
+- [x] Create `/api/quiz/:sessionId/question` endpoint (GET)
+- [x] Create `/api/quiz/:sessionId/answer` endpoint (POST)
+- [x] Create `/api/quiz/:sessionId/summary` endpoint (GET)
+- [x] Implement session state validation
+- [x] Implement error handling for invalid operations
 
 ---
 
