@@ -66,35 +66,35 @@ This document breaks down the AI Flashcard Quizzer specification into concrete, 
 ## Phase 3: Image Scanning and Flashcard Digitization
 
 ### 3.1 Image Upload Service
-- [ ] Implement image upload to Vercel Storage
-- [ ] Validate image format (JPEG, PNG, WEBP)
-- [ ] Validate image file size (≤20MB)
-- [ ] Create `/api/flashcards/upload` endpoint
-- [ ] Implement upload progress tracking
-- [ ] Handle upload errors gracefully
+- [x] Implement image upload to Vercel Storage
+- [x] Validate image format (JPEG, PNG, WEBP)
+- [x] Validate image file size (≤20MB)
+- [x] Create `/api/flashcards/upload` endpoint
+- [x] Implement upload progress tracking
+- [x] Handle upload errors gracefully
 
 ### 3.2 Scanner Service Implementation
-- [ ] Implement AI Vision API integration for text extraction
-- [ ] Create Q&A pair identification logic
-- [ ] Implement confidence scoring for extracted content
-- [ ] Create extraction validation logic
-- [ ] Implement retry logic for failed extractions
-- [ ] Handle cases where no recognizable content is found
+- [x] Implement AI Vision API integration for text extraction
+- [x] Create Q&A pair identification logic
+- [x] Implement confidence scoring for extracted content
+- [x] Create extraction validation logic
+- [x] Implement retry logic for failed extractions
+- [x] Handle cases where no recognizable content is found
 
 ### 3.3 Flashcard Preview and Confirmation
-- [ ] Create extracted flashcards preview UI
-- [ ] Implement flashcard edit interface for preview
-- [ ] Implement confirm/discard workflow
-- [ ] Create `/api/flashcards` endpoint for saving confirmed flashcards
-- [ ] Implement batch flashcard persistence to Firestore
+- [x] Create extracted flashcards preview UI
+- [x] Implement flashcard edit interface for preview
+- [x] Implement confirm/discard workflow
+- [x] Create `/api/flashcards` endpoint for saving confirmed flashcards
+- [x] Implement batch flashcard persistence to Firestore
 
 ### 3.4 Upload Image Screen
-- [ ] Create Upload Image screen with Tamagui components
-- [ ] Implement image picker/drag-and-drop zone
-- [ ] Implement upload progress indicator
-- [ ] Display extracted flashcards preview
-- [ ] Implement confirm/edit/cancel buttons
-- [ ] Add error messaging for upload failures
+- [x] Create Upload Image screen with Tamagui components
+- [x] Implement image picker/drag-and-drop zone
+- [x] Implement upload progress indicator
+- [x] Display extracted flashcards preview
+- [x] Implement confirm/edit/cancel buttons
+- [x] Add error messaging for upload failures
 
 ---
 

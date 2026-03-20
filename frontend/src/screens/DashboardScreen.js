@@ -9,7 +9,7 @@ const React = require('react');
 const { YStack, XStack, Text, Button, Card } = require('@tamagui/core');
 const useAuth = require('../hooks/useAuth');
 
-function DashboardScreen() {
+function DashboardScreen({ onNavigate, screens }) {
   const { user, logout } = useAuth();
 
   return (
@@ -56,7 +56,11 @@ function DashboardScreen() {
             <Text fontSize="$5" fontWeight="bold" color="$textPrimary">
               My Modules
             </Text>
-            <Button theme="purple" size="$3">
+            <Button
+              theme="purple"
+              size="$3"
+              onPress={() => onNavigate && onNavigate(screens?.UPLOAD_IMAGE || 'upload_image')}
+            >
               Upload Image
             </Button>
           </XStack>
