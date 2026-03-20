@@ -94,10 +94,19 @@ export async function POST(request) {
         moduleAssignments[moduleId].flashcardIds.push(ref.id);
       }
 
-      // Update module flashcard count
+      // Update module flashcard count and aggregate score
       const existingCount = moduleDoc.data().flashcardCount || 0;
+      const newCount = existingCount + flashcards.length;
+      const allSnapshot = await db
+        .collection('flashcards')
+        .where('moduleId', '==', moduleId)
+        .get();
+      const allCards = allSnapshot.docs.map((doc) => doc.data());
+      const totalScore = allCards.reduce((sum, card) => sum + (card.knowledgeScore || 0), 0);
+      const aggregateKnowledgeScore = newCount > 0 ? Math.round(totalScore / newCount) : 0;
       await db.collection('modules').doc(moduleId).update({
-        flashcardCount: existingCount + flashcards.length,
+        flashcardCount: newCount,
+        aggregateKnowledgeScore,
         updatedAt: new Date(),
       });
     } else {
@@ -198,12 +207,21 @@ export async function POST(request) {
         moduleAssignments[targetModuleId].flashcardIds.push(ref.id);
       }
 
-      // Update flashcard counts for all affected modules
+      // Update flashcard counts and aggregate scores for all affected modules
       for (const [modId, assignment] of Object.entries(moduleAssignments)) {
         const moduleDoc = await db.collection('modules').doc(modId).get();
         const existingCount = moduleDoc.data().flashcardCount || 0;
+        const newCount = existingCount + assignment.flashcardIds.length;
+        const allSnapshot = await db
+          .collection('flashcards')
+          .where('moduleId', '==', modId)
+          .get();
+        const allCards = allSnapshot.docs.map((doc) => doc.data());
+        const totalScore = allCards.reduce((sum, card) => sum + (card.knowledgeScore || 0), 0);
+        const aggregateKnowledgeScore = newCount > 0 ? Math.round(totalScore / newCount) : 0;
         await db.collection('modules').doc(modId).update({
-          flashcardCount: existingCount + assignment.flashcardIds.length,
+          flashcardCount: newCount,
+          aggregateKnowledgeScore,
           updatedAt: new Date(),
         });
       }

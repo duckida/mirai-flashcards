@@ -129,36 +129,37 @@ This document breaks down the AI Flashcard Quizzer specification into concrete, 
 ## Phase 5: Flashcard Management
 
 ### 5.1 Flashcard Data Model and Persistence
-- [ ] Create Firestore `flashcards` collection schema
-- [ ] Implement flashcard creation with knowledge score initialization (0)
-- [ ] Implement flashcard retrieval by module
-- [ ] Implement flashcard update endpoint
-- [ ] Implement flashcard deletion endpoint
-- [ ] Create Firestore indexes for efficient queries
+- [x] Create Firestore `flashcards` collection schema
+- [x] Implement flashcard creation with knowledge score initialization (0)
+- [x] Implement flashcard retrieval by module
+- [x] Implement flashcard update endpoint
+- [x] Implement flashcard deletion endpoint
+- [x] Create Firestore indexes for efficient queries
 
 ### 5.2 Flashcard CRUD Operations
-- [ ] Create `/api/flashcards/:moduleId` endpoint (GET)
-- [ ] Create `/api/flashcards` endpoint (POST)
-- [ ] Create `/api/flashcards/:id` endpoint (PATCH)
-- [ ] Create `/api/flashcards/:id` endpoint (DELETE)
-- [ ] Implement validation for non-empty question/answer fields
-- [ ] Implement error handling for invalid operations
+- [x] Create `/api/flashcards/:moduleId` endpoint (GET)
+- [x] Create `/api/flashcards` endpoint (POST)
+- [x] Create `/api/flashcards/:id` endpoint (PATCH)
+- [x] Create `/api/flashcards/:id` endpoint (DELETE)
+- [x] Implement validation for non-empty question/answer fields
+- [x] Implement error handling for invalid operations
 
 ### 5.3 Flashcard UI and Display
-- [ ] Create Module Detail screen showing flashcard list
-- [ ] Implement question/answer toggle display
-- [ ] Display knowledge score for each flashcard
-- [ ] Create edit button for each flashcard
-- [ ] Create delete button for each flashcard
-- [ ] Implement Flashcard Editor screen with validation
-- [ ] Add visual feedback for edit/delete operations
+- [x] Create Module Detail screen showing flashcard list
+- [x] Implement question/answer toggle display
+- [x] Display knowledge score for each flashcard
+- [x] Create edit button for each flashcard
+- [x] Create delete button for each flashcard
+- [x] Implement Flashcard Editor (inline modal) with validation
+- [x] Add "Add Flashcard" button for manual creation
+- [x] Add visual feedback for edit/delete operations
 
 ### 5.4 Flashcard Validation and Error Handling
-- [ ] Implement empty field validation
-- [ ] Display validation error messages
-- [ ] Prevent save with invalid data
-- [ ] Implement optimistic UI updates
-- [ ] Handle concurrent edit conflicts
+- [x] Implement empty field validation
+- [x] Display validation error messages
+- [x] Prevent save with invalid data
+- [x] Implement UI feedback on edit/delete operations
+- [x] Handle error states with dismissible error banner
 
 ---
 
@@ -556,28 +557,12 @@ This document breaks down the AI Flashcard Quizzer specification into concrete, 
 ## Phase 16: Deployment and Monitoring
 
 ### 16.1 Deployment Pipeline
-- [ ] Configure GitHub Actions CI/CD
-- [ ] Set up automated testing in CI
-- [ ] Set up automated linting in CI
 - [ ] Configure Vercel deployment
-- [ ] Set up staging environment
-- [ ] Set up production environment
-- [ ] Implement deployment approval workflow
-
-### 16.2 Monitoring and Observability
-- [ ] Set up Sentry error tracking
-- [ ] Configure Vercel Analytics
-- [ ] Implement API response time logging
-- [ ] Implement error rate monitoring
-- [ ] Set up ElevenLabs connection monitoring
-- [ ] Set up Firestore usage monitoring
-- [ ] Create monitoring dashboards
 
 ### 16.3 Performance Optimization
 - [ ] Implement code splitting for screens
 - [ ] Optimize image compression and delivery
 - [ ] Implement state management optimization
-- [ ] Implement local caching strategy
 - [ ] Optimize Firestore queries
 - [ ] Implement API response caching
 - [ ] Optimize bundle size

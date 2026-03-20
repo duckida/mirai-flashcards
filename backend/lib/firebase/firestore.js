@@ -1,3 +1,4 @@
+import admin from 'firebase-admin';
 import { getFirestore } from './admin.js';
 
 /**
@@ -283,6 +284,62 @@ export class FirestoreService {
     await this.db.collection('quiz_sessions').doc(sessionId).update({
       responses: admin.firestore.FieldValue.arrayUnion(response),
     });
+  }
+
+  // ============================================
+  // Aggregate Score Updates
+  // ============================================
+
+  /**
+   * Recalculate and update module aggregate knowledge score
+   * @param {string} moduleId - Module ID
+   * @returns {Promise<number>} New aggregate score
+   */
+  async recalculateModuleScore(moduleId) {
+    const flashcards = await this.getModuleFlashcards(moduleId);
+    if (flashcards.length === 0) {
+      await this.updateModule(moduleId, { aggregateKnowledgeScore: 0, flashcardCount: 0 });
+      return 0;
+    }
+    const total = flashcards.reduce((sum, fc) => sum + (fc.knowledgeScore || 0), 0);
+    const aggregate = Math.round(total / flashcards.length);
+    await this.updateModule(moduleId, {
+      aggregateKnowledgeScore: aggregate,
+      flashcardCount: flashcards.length,
+    });
+    return aggregate;
+  }
+
+  /**
+   * Update flashcard knowledge score with bounds checking
+   * @param {string} flashcardId - Flashcard ID
+   * @param {boolean} isCorrect - Whether the answer was correct
+   * @param {number} scoreDelta - Score change amount (1-10)
+   * @returns {Promise<number>} New knowledge score
+   */
+  async updateKnowledgeScore(flashcardId, isCorrect, scoreDelta) {
+    const flashcard = await this.getFlashcard(flashcardId);
+    if (!flashcard) throw new Error(`Flashcard ${flashcardId} not found`);
+
+    const delta = Math.min(10, Math.max(1, Math.abs(scoreDelta)));
+    let newScore = isCorrect
+      ? flashcard.knowledgeScore + delta
+      : flashcard.knowledgeScore - delta;
+    newScore = Math.min(100, Math.max(0, newScore));
+
+    const updates = {
+      knowledgeScore: newScore,
+      reviewCount: flashcard.reviewCount + 1,
+    };
+    if (isCorrect) {
+      updates.correctCount = flashcard.correctCount + 1;
+    } else {
+      updates.incorrectCount = flashcard.incorrectCount + 1;
+    }
+    updates.lastReviewedAt = new Date();
+
+    await this.updateFlashcard(flashcardId, updates);
+    return newScore;
   }
 
   // ============================================

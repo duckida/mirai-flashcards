@@ -148,13 +148,27 @@ export async function DELETE(request, { params }) {
     // Delete the flashcard
     await db.collection('flashcards').doc(id).delete();
 
-    // Update module flashcard count
+    // Update module flashcard count and recalculate aggregate score
     if (moduleId) {
       const moduleDoc = await db.collection('modules').doc(moduleId).get();
       if (moduleDoc.exists) {
         const currentCount = moduleDoc.data().flashcardCount || 0;
+        const newCount = Math.max(0, currentCount - 1);
+
+        let aggregateKnowledgeScore = 0;
+        if (newCount > 0) {
+          const remainingSnapshot = await db
+            .collection('flashcards')
+            .where('moduleId', '==', moduleId)
+            .get();
+          const remaining = remainingSnapshot.docs.map((doc) => doc.data());
+          const totalScore = remaining.reduce((sum, card) => sum + (card.knowledgeScore || 0), 0);
+          aggregateKnowledgeScore = Math.round(totalScore / remaining.length);
+        }
+
         await db.collection('modules').doc(moduleId).update({
-          flashcardCount: Math.max(0, currentCount - 1),
+          flashcardCount: newCount,
+          aggregateKnowledgeScore,
           updatedAt: new Date(),
         });
       }

@@ -52,6 +52,9 @@ function FlashcardCard({ flashcard, onEdit, onDelete, onToggle, isExpanded }) {
             <Button size="$2" variant="outlined" onPress={() => onToggle(flashcard.id)}>
               {isExpanded ? 'Hide Answer' : 'Show Answer'}
             </Button>
+            <Button size="$2" variant="outlined" onPress={() => onEdit(flashcard.id)}>
+              Edit
+            </Button>
             <Button size="$2" variant="outlined" borderColor="$error" color="$error" onPress={() => onDelete(flashcard.id)}>
               Delete
             </Button>
@@ -176,6 +179,96 @@ function FlashcardEditorModal({ flashcard, onSave, onCancel }) {
   );
 }
 
+function NewFlashcardForm({ moduleId, userId, onSave, onCancel }) {
+  const [question, setQuestion] = useState('');
+  const [answer, setAnswer] = useState('');
+  const [error, setError] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!question.trim() || !answer.trim()) {
+      setError('Question and answer cannot be empty');
+      return;
+    }
+    setError(null);
+    setIsSaving(true);
+    try {
+      await onSave({ question: question.trim(), answer: answer.trim() });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <Card elevate padding="$4" marginBottom="$3" backgroundColor="$cardBackground" borderColor="$primary" borderWidth={2}>
+      <YStack gap="$3">
+        <Text fontSize="$4" fontWeight="bold" color="$primary">
+          New Flashcard
+        </Text>
+
+        <YStack gap="$2">
+          <Text fontSize="$2" color="$textSecondary" fontWeight="600">
+            Question
+          </Text>
+          <Input
+            value={question}
+            onChangeText={setQuestion}
+            placeholder="Enter question"
+            multiline
+            numberOfLines={3}
+            padding="$3"
+            backgroundColor="$background"
+            borderColor={question.trim() ? '$borderColor' : '$error'}
+            borderWidth={1}
+            borderRadius="$3"
+          />
+        </YStack>
+
+        <YStack gap="$2">
+          <Text fontSize="$2" color="$textSecondary" fontWeight="600">
+            Answer
+          </Text>
+          <Input
+            value={answer}
+            onChangeText={setAnswer}
+            placeholder="Enter answer"
+            multiline
+            numberOfLines={3}
+            padding="$3"
+            backgroundColor="$background"
+            borderColor={answer.trim() ? '$borderColor' : '$error'}
+            borderWidth={1}
+            borderRadius="$3"
+          />
+        </YStack>
+
+        {error && (
+          <Text fontSize="$2" color="$error">
+            {error}
+          </Text>
+        )}
+
+        <XStack gap="$2" justifyContent="flex-end">
+          <Button size="$3" variant="outlined" onPress={onCancel} disabled={isSaving}>
+            Cancel
+          </Button>
+          <Button
+            size="$3"
+            theme="purple"
+            onPress={handleSave}
+            disabled={!question.trim() || !answer.trim() || isSaving}
+            opacity={!question.trim() || !answer.trim() || isSaving ? 0.5 : 1}
+          >
+            {isSaving ? 'Saving...' : 'Save'}
+          </Button>
+        </XStack>
+      </YStack>
+    </Card>
+  );
+}
+
 function ModuleDetailScreen({ moduleId, onBack, onNavigate, screens }) {
   const { user } = useAuth();
   const [module, setModule] = useState(null);
@@ -185,6 +278,7 @@ function ModuleDetailScreen({ moduleId, onBack, onNavigate, screens }) {
   const [expandedCardId, setExpandedCardId] = useState(null);
   const [editingCardId, setEditingCardId] = useState(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [showNewForm, setShowNewForm] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!moduleId) return;
@@ -250,6 +344,24 @@ function ModuleDetailScreen({ moduleId, onBack, onNavigate, screens }) {
       }
     },
     [deleteConfirmId]
+  );
+
+  const handleCreateFlashcard = useCallback(
+    async (data) => {
+      const result = await apiClient.post('/api/flashcards', {
+        userId: user.id,
+        flashcards: [{ question: data.question, answer: data.answer }],
+        moduleId,
+      });
+
+      if (result.success && result.flashcards && result.flashcards.length > 0) {
+        setFlashcards((prev) => [...prev, ...result.flashcards]);
+        setShowNewForm(false);
+      } else {
+        throw new Error(result.error || 'Failed to create flashcard');
+      }
+    },
+    [user, moduleId]
   );
 
   const aggregateScore =
@@ -331,15 +443,20 @@ function ModuleDetailScreen({ moduleId, onBack, onNavigate, screens }) {
               Average across all flashcards
             </Text>
           </YStack>
-          <XStack
-            paddingHorizontal="$3"
-            paddingVertical="$2"
-            backgroundColor={scoreColor}
-            borderRadius="$3"
-          >
-            <Text fontSize="$5" color="white" fontWeight="bold">
-              {aggregateScore}%
-            </Text>
+          <XStack gap="$3" alignItems="center">
+            <Button size="$2" theme="purple" onPress={() => setShowNewForm(true)}>
+              + Add Card
+            </Button>
+            <XStack
+              paddingHorizontal="$3"
+              paddingVertical="$2"
+              backgroundColor={scoreColor}
+              borderRadius="$3"
+            >
+              <Text fontSize="$5" color="white" fontWeight="bold">
+                {aggregateScore}%
+              </Text>
+            </XStack>
           </XStack>
         </XStack>
         <YStack marginTop="$3" height={8} backgroundColor="$backgroundHover" borderRadius="$round" overflow="hidden">
@@ -355,11 +472,24 @@ function ModuleDetailScreen({ moduleId, onBack, onNavigate, screens }) {
       {/* Flashcard List */}
       <ScrollView flex={1}>
         <YStack>
-          {flashcards.length === 0 ? (
+          {showNewForm && (
+            <NewFlashcardForm
+              moduleId={moduleId}
+              userId={user?.id}
+              onSave={handleCreateFlashcard}
+              onCancel={() => setShowNewForm(false)}
+            />
+          )}
+          {flashcards.length === 0 && !showNewForm ? (
             <Card padding="$8" backgroundColor="$backgroundHover" borderRadius="$4" alignItems="center">
-              <Text fontSize="$3" color="$textTertiary" textAlign="center">
-                No flashcards in this module yet.
-              </Text>
+              <YStack alignItems="center" gap="$3">
+                <Text fontSize="$3" color="$textTertiary" textAlign="center">
+                  No flashcards in this module yet.
+                </Text>
+                <Button size="$3" theme="purple" onPress={() => setShowNewForm(true)}>
+                  Add Your First Card
+                </Button>
+              </YStack>
             </Card>
           ) : (
             flashcards.map((card) =>

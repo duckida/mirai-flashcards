@@ -1,0 +1,152 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: Check if user is authenticated
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Helper: Check if the requesting user owns the document
+    function isOwner(userId) {
+      return isAuth() && request.auth.uid == userId;
+    }
+
+    // Helper: Validate required fields for a user document
+    function isValidUser() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['id', 'email', 'name', 'createdAt', 'lastLoginAt'])
+        && data.id is string
+        && data.email is string
+        && data.name is string
+        && data.createdAt is timestamp
+        && data.lastLoginAt is timestamp;
+    }
+
+    // Helper: Validate required fields for a module document
+    function isValidModule() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['userId', 'name', 'flashcardCount', 'aggregateKnowledgeScore', 'createdAt', 'updatedAt'])
+        && data.userId is string
+        && data.name is string
+        && data.name.size() > 0
+        && data.name.size() <= 200
+        && data.flashcardCount is number
+        && data.flashcardCount >= 0
+        && data.aggregateKnowledgeScore is number
+        && data.aggregateKnowledgeScore >= 0
+        && data.aggregateKnowledgeScore <= 100
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // Helper: Validate required fields for a flashcard document
+    function isValidFlashcard() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['userId', 'moduleId', 'question', 'answer', 'knowledgeScore', 'createdAt', 'updatedAt'])
+        && data.userId is string
+        && data.moduleId is string
+        && data.question is string
+        && data.question.size() > 0
+        && data.answer is string
+        && data.answer.size() > 0
+        && data.knowledgeScore is number
+        && data.knowledgeScore >= 0
+        && data.knowledgeScore <= 100
+        && data.reviewCount is number
+        && data.reviewCount >= 0
+        && data.correctCount is number
+        && data.correctCount >= 0
+        && data.incorrectCount is number
+        && data.incorrectCount >= 0
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // Helper: Validate required fields for a quiz session document
+    function isValidQuizSession() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['userId', 'moduleId', 'type', 'status', 'flashcardIds', 'currentFlashcardIndex', 'startedAt'])
+        && data.userId is string
+        && data.moduleId is string
+        && data.type in ['voice', 'image']
+        && data.status in ['active', 'paused', 'completed', 'abandoned']
+        && data.flashcardIds is list
+        && data.currentFlashcardIndex is number
+        && data.currentFlashcardIndex >= 0
+        && data.startedAt is timestamp;
+    }
+
+    // Helper: Validate required fields for a presentation document
+    function isValidPresentation() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['userId', 'topic', 'status', 'createdAt'])
+        && data.userId is string
+        && data.topic is string
+        && data.topic.size() > 0
+        && data.status in ['pending', 'ready', 'failed']
+        && data.createdAt is timestamp;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser();
+      allow update: if isOwner(userId) && isValidUser();
+      allow delete: if isOwner(userId);
+    }
+
+    // Modules collection
+    match /modules/{moduleId} {
+      allow read: if isAuth() && resource.data.userId == request.auth.uid;
+      allow create: if isAuth()
+        && request.resource.data.userId == request.auth.uid
+        && isValidModule();
+      allow update: if isAuth()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && isValidModule();
+      allow delete: if isAuth() && resource.data.userId == request.auth.uid;
+    }
+
+    // Flashcards collection
+    match /flashcards/{flashcardId} {
+      allow read: if isAuth() && resource.data.userId == request.auth.uid;
+      allow create: if isAuth()
+        && request.resource.data.userId == request.auth.uid
+        && isValidFlashcard();
+      allow update: if isAuth()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && isValidFlashcard();
+      allow delete: if isAuth() && resource.data.userId == request.auth.uid;
+    }
+
+    // Quiz sessions collection
+    match /quiz_sessions/{sessionId} {
+      allow read: if isAuth() && resource.data.userId == request.auth.uid;
+      allow create: if isAuth()
+        && request.resource.data.userId == request.auth.uid
+        && isValidQuizSession();
+      allow update: if isAuth()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && isValidQuizSession();
+      allow delete: if isAuth() && resource.data.userId == request.auth.uid;
+    }
+
+    // Presentations collection
+    match /presentations/{presentationId} {
+      allow read: if isAuth() && resource.data.userId == request.auth.uid;
+      allow create: if isAuth()
+        && request.resource.data.userId == request.auth.uid
+        && isValidPresentation();
+      allow update: if isAuth()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && isValidPresentation();
+      allow delete: if isAuth() && resource.data.userId == request.auth.uid;
+    }
+  }
+}
