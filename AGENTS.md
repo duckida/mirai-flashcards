@@ -25,3 +25,4 @@ Context and conventions live in `.kiro/steering/`:
 4. Backend uses ES Modules (`import/export`), frontend uses CommonJS (`require/module.exports`)
 5. All UI must use React Native + Tamagui — no custom or third-party styling
 6. Check `backend/AGENTS.md` for Next.js-specific caveats
+7. After completing tasks, tick them off on the tasks md file, and commit all to github.

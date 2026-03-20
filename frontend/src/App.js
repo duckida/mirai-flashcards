@@ -5,19 +5,30 @@ const tamaguiConfig = require('../tamagui.config').default
 const AuthScreen = require('./screens/AuthScreen')
 const DashboardScreen = require('./screens/DashboardScreen')
 const UploadImageScreen = require('./screens/UploadImageScreen')
+const ModuleDetailScreen = require('./screens/ModuleDetailScreen')
 const useAuth = require('./hooks/useAuth')
 
 const SCREENS = {
   DASHBOARD: 'dashboard',
   UPLOAD_IMAGE: 'upload_image',
+  MODULE_DETAIL: 'module_detail',
 }
 
 function AppContent() {
   const { isLoading, isAuthenticated } = useAuth()
   const [currentScreen, setCurrentScreen] = useState(SCREENS.DASHBOARD)
+  const [selectedModuleId, setSelectedModuleId] = useState(null)
 
-  const navigateTo = useCallback((screen) => {
+  const navigateTo = useCallback((screen, moduleId) => {
     setCurrentScreen(screen)
+    if (moduleId) {
+      setSelectedModuleId(moduleId)
+    }
+  }, [])
+
+  const goBack = useCallback(() => {
+    setCurrentScreen(SCREENS.DASHBOARD)
+    setSelectedModuleId(null)
   }, [])
 
   if (isLoading) {
@@ -38,8 +49,19 @@ function AppContent() {
   if (currentScreen === SCREENS.UPLOAD_IMAGE) {
     return (
       <UploadImageScreen
-        onBack={() => navigateTo(SCREENS.DASHBOARD)}
-        onSuccess={() => navigateTo(SCREENS.DASHBOARD)}
+        onBack={goBack}
+        onSuccess={goBack}
+      />
+    )
+  }
+
+  if (currentScreen === SCREENS.MODULE_DETAIL && selectedModuleId) {
+    return (
+      <ModuleDetailScreen
+        moduleId={selectedModuleId}
+        onBack={goBack}
+        onNavigate={navigateTo}
+        screens={SCREENS}
       />
     )
   }
