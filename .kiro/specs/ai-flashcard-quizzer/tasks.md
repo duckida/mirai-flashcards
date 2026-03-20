@@ -15,7 +15,9 @@ This document breaks down the AI Flashcard Quizzer specification into concrete, 
 
 ### 1.2 Environment and Deployment Setup
 - [x] Set up Vercel project and environment variables (this is for me to do)
-- [-] I created a GitHub repo called `duckida/mirai-flashcards`, initialize that as the repo
+- [x] I created a GitHub repo called `duckida/mirai-flashcards`, initialize that as the repo
+
+- [x] Now that I have the github setup, teach me how to setup Vercel
 - [ ] Configure Vercel Storage for image uploads
 - [ ] Set up Firestore project and authentication
 - [ ] Configure Firebase Admin SDK for backend
