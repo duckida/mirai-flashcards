@@ -5,9 +5,8 @@
 export default {
   testEnvironment: 'node',
   transform: {},
-  extensionsToTreatAsEsm: ['.js'],
   moduleNameMapper: {
-    '^(\\.{1,2}/.*)\\.js$': '$1',
+    '^@/(.*)$': '<rootDir>/$1',
   },
   testMatch: [
     '**/__tests__/**/*.js',
@@ -31,7 +30,6 @@ export default {
       statements: 80,
     },
   },
-  setupFilesAfterSetup: [],
   testTimeout: 10000,
   verbose: true,
 };

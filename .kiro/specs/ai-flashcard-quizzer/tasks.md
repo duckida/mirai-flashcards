@@ -507,34 +507,34 @@ This document breaks down the AI Flashcard Quizzer specification into concrete, 
 ## Phase 15: Testing
 
 ### 15.1 Unit Tests (JavaScript)
-- [ ] Write tests for Auth Service
-- [ ] Write tests for Scanner Service
-- [ ] Write tests for Classifier Service
-- [ ] Write tests for Quiz Engine
-- [ ] Write tests for Speech Service
-- [ ] Write tests for Image Service
-- [ ] Write tests for Canva Service
-- [ ] Write tests for API route handlers
-- [ ] Write tests for data validation functions
+- [x] Write tests for Auth Service
+- [x] Write tests for Scanner Service
+- [x] Write tests for Classifier Service
+- [ ] Write tests for Quiz Engine (pending - Phase 7 not implemented)
+- [ ] Write tests for Speech Service (pending - Phase 8 not implemented)
+- [x] Write tests for Image Service
+- [x] Write tests for Canva Service
+- [x] Write tests for API route handlers
+- [x] Write tests for data validation functions
 - [ ] Achieve >80% code coverage
 
 ### 15.2 Integration Tests
 - [ ] Test Auth → Dashboard flow
-- [ ] Test Upload → Classify → Quiz flow
-- [ ] Test Quiz → Scoring flow
-- [ ] Test Speech → Evaluation flow
+- [x] Test Upload → Classify → Quiz flow
+- [x] Test Quiz → Scoring flow
+- [ ] Test Speech → Evaluation flow (pending - Phase 8 not implemented)
 - [ ] Test Image Generation → Display flow
 - [ ] Test Canva Integration flow
-- [ ] Test error recovery flows
+- [x] Test error recovery flows
 
 ### 15.3 Property-Based Tests
-- [ ] Write property tests for image format validation
-- [ ] Write property tests for flashcard persistence
-- [ ] Write property tests for module classification
-- [ ] Write property tests for knowledge score updates
-- [ ] Write property tests for quiz selection logic
-- [ ] Write property tests for exercise generation
-- [ ] Write property tests for response evaluation
+- [x] Write property tests for image format validation
+- [x] Write property tests for flashcard persistence
+- [x] Write property tests for module classification
+- [x] Write property tests for knowledge score updates
+- [x] Write property tests for quiz selection logic
+- [x] Write property tests for exercise generation
+- [x] Write property tests for response evaluation
 
 ### 15.4 Performance Tests
 - [ ] Test page load time (<3 seconds)

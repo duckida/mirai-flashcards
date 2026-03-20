@@ -130,7 +130,7 @@ describe('uploadService', () => {
       const extensions = ['.jpg', '.jpeg', '.png', '.webp'];
       extensions.forEach((ext) => {
         const fileName = generateStorageFileName(`photo${ext}`, 'user123');
-        expect(fileName).toEndWith(ext);
+        expect(fileName.endsWith(ext)).toBe(true);
       });
     });
 
