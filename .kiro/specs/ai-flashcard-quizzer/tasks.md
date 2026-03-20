@@ -30,9 +30,9 @@ This document breaks down the AI Flashcard Quizzer specification into concrete, 
 - [x] Register and configure Civic.ai OAuth application. Docs of Civic are fonud at `https://raw.githubusercontent.com/civicteam/demos/refs/heads/main/apps/civic-auth-demo/README.md`. My CIVIC_CLIENT_ID=a141d53d-9b85-41b5-8590-38a27caaf582
 - [x] Set up ElevenLabs API account and credentials
 - [x] Configure Canva MCP integration via Civic.ai
-- [ ] Set up AI Vision API (Vercel AI SDK)
-- [ ] Set up AI Image Generation API (Vercel AI SDK)
-- [ ] Set up AI Classification API (Vercel AI SDK) for module assignment
+- [x] Set up AI Vision API (Vercel AI SDK)
+- [x] Set up AI Image Generation API (Vercel AI SDK)
+- [x] Set up AI Classification API (Vercel AI SDK) for module assignment
 
 ---
 
