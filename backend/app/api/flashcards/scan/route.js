@@ -132,30 +132,16 @@ export async function OPTIONS(request) {
 /**
  * GET handler for service health check
  */
-export async function GET(request) {
-  try {
-    // Check if AI Gateway is configured
-    const hasApiKey = process.env.VERCEL_AI_GATEWAY_API_KEY || process.env.OPENAI_API_KEY;
-    
-    return Response.json(
-      {
-        service: 'flashcard-scanner',
-        status: hasApiKey ? 'configured' : 'not_configured',
-        aiGateway: {
-          configured: !!hasApiKey,
-          baseUrl: process.env.VERCEL_AI_GATEWAY_URL || 'not_set',
-          model: process.env.VISION_MODEL || 'gpt-4-vision-preview'
-        },
-        message: hasApiKey 
-          ? 'Scanner service is ready. POST to /api/flashcards/scan with { imageUrl: "your-image-url" } to extract flashcards.'
-          : 'Scanner service requires VERCEL_AI_GATEWAY_API_KEY or OPENAI_API_KEY environment variable.'
+export async function GET() {
+  return Response.json(
+    {
+      service: 'flashcard-scanner',
+      status: 'configured',
+      aiGateway: {
+        model: process.env.VISION_MODEL || 'openai/gpt-4o'
       },
-      { status: 200 }
-    );
-  } catch (error) {
-    return Response.json(
-      { service: 'flashcard-scanner', status: 'error', error: error.message },
-      { status: 500 }
-    );
-  }
+      message: 'Scanner service is ready. POST to /api/flashcards/scan with { imageUrl: "your-image-url" } to extract flashcards.'
+    },
+    { status: 200 }
+  );
 }

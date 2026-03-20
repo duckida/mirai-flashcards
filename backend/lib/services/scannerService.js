@@ -3,8 +3,7 @@
  * Handles AI vision extraction of Q&A pairs from images using Vercel AI Gateway
  */
 
-import { openai } from '@ai-sdk/openai';
-import { generateText } from 'ai';
+import { gateway, generateText } from 'ai';
 
 /**
  * @typedef {Object} ExtractedFlashcard
@@ -23,16 +22,9 @@ import { generateText } from 'ai';
 
 /**
  * Configuration for Vercel AI Gateway
- * Uses Vercel AI Gateway as a proxy to OpenAI vision models
  */
-const AI_GATEWAY_CONFIG = {
-  // Vercel AI Gateway base URL
-  baseURL: process.env.VERCEL_AI_GATEWAY_URL || 'https://gateway.ai.cloudflare.com/v1',
-  // API key for Vercel AI Gateway
-  apiKey: process.env.VERCEL_AI_GATEWAY_API_KEY || process.env.OPENAI_API_KEY,
-  // Model to use for vision tasks
-  model: process.env.VISION_MODEL || 'gpt-4-vision-preview',
-  // Maximum tokens for vision responses
+const GATEWAY_CONFIG = {
+  model: process.env.VISION_MODEL || 'openai/gpt-4o',
   maxTokens: 4096,
 };
 
@@ -72,21 +64,9 @@ Only return valid JSON.`;
 async function extractFlashcards(imageUrl) {
   try {
     console.log('Starting flashcard extraction from:', imageUrl);
-    
-    // Check if we have the required API key
-    if (!AI_GATEWAY_CONFIG.apiKey) {
-      throw new Error('Vercel AI Gateway API key is not configured. Please set VERCEL_AI_GATEWAY_API_KEY or OPENAI_API_KEY environment variable.');
-    }
 
-    // Configure the OpenAI client with Vercel AI Gateway
-    const gatewayClient = openai({
-      baseURL: AI_GATEWAY_CONFIG.baseURL,
-      apiKey: AI_GATEWAY_CONFIG.apiKey,
-    });
-
-    // Generate text using vision model
     const { text } = await generateText({
-      model: gatewayClient(AI_GATEWAY_CONFIG.model),
+      model: gateway(GATEWAY_CONFIG.model),
       prompt: EXTRACTION_PROMPT,
       messages: [
         {
@@ -97,7 +77,7 @@ async function extractFlashcards(imageUrl) {
           ],
         },
       ],
-      maxTokens: AI_GATEWAY_CONFIG.maxTokens,
+      maxTokens: GATEWAY_CONFIG.maxTokens,
     });
 
     console.log('AI response received:', text.substring(0, 200) + '...');
@@ -105,7 +85,6 @@ async function extractFlashcards(imageUrl) {
     // Parse the JSON response
     let parsedResponse;
     try {
-      // Extract JSON from the response (in case there's additional text)
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         parsedResponse = JSON.parse(jsonMatch[0]);
@@ -126,7 +105,7 @@ async function extractFlashcards(imageUrl) {
     const extractedFlashcards = parsedResponse.flashcards.map((card, index) => ({
       question: card.question?.trim() || `Question ${index + 1}`,
       answer: card.answer?.trim() || `Answer ${index + 1}`,
-      confidence: Math.min(Math.max(card.confidence || 0.7, 0), 1), // Clamp between 0-1
+      confidence: Math.min(Math.max(card.confidence || 0.7, 0), 1),
       sourceImageUrl: imageUrl,
     }));
 
@@ -135,10 +114,9 @@ async function extractFlashcards(imageUrl) {
 
   } catch (error) {
     console.error('Flashcard extraction failed:', error);
-    
-    // Provide more specific error messages
-    if (error.message.includes('API key')) {
-      throw new Error('AI Vision API is not properly configured. Please check your Vercel AI Gateway API key.');
+
+    if (error.message.includes('API key') || error.message.includes('configured')) {
+      throw new Error('AI Vision API is not properly configured. Please check your AI_GATEWAY_API_KEY environment variable.');
     } else if (error.message.includes('rate limit')) {
       throw new Error('AI Vision API rate limit exceeded. Please try again in a moment.');
     } else if (error.message.includes('parse')) {
@@ -146,7 +124,7 @@ async function extractFlashcards(imageUrl) {
     } else if (error.message.includes('network') || error.message.includes('fetch')) {
       throw new Error('Network error while communicating with AI Vision service. Please check your connection.');
     }
-    
+
     throw new Error(`Flashcard extraction failed: ${error.message}`);
   }
 }
@@ -173,7 +151,6 @@ function validateExtraction(flashcards) {
   flashcards.forEach((card, index) => {
     const cardErrors = [];
 
-    // Check required fields
     if (!card.question || card.question.trim().length === 0) {
       cardErrors.push('Question is empty');
     } else if (card.question.trim().length < 3) {
@@ -186,14 +163,12 @@ function validateExtraction(flashcards) {
       cardErrors.push('Answer is too short (minimum 3 characters)');
     }
 
-    // Check confidence score
     if (typeof card.confidence !== 'number' || card.confidence < 0 || card.confidence > 1) {
       cardErrors.push('Invalid confidence score (must be between 0 and 1)');
     }
 
-    // Check for duplicate content
     const isDuplicate = validFlashcards.some(
-      existingCard => 
+      existingCard =>
         existingCard.question.toLowerCase() === card.question.toLowerCase() ||
         existingCard.answer.toLowerCase() === card.answer.toLowerCase()
     );
@@ -209,9 +184,6 @@ function validateExtraction(flashcards) {
     }
   });
 
-  const isValid = errors.length === 0 && validFlashcards.length > 0;
-  
-  // If we have some valid flashcards but also errors, we can still proceed
   if (validFlashcards.length > 0) {
     console.log(`Validation: ${validFlashcards.length} valid, ${errors.length} invalid flashcards`);
   }
@@ -240,10 +212,8 @@ async function processImage(imageUrl, options = {}) {
   const confidenceThreshold = options.confidenceThreshold || 0.5;
 
   try {
-    // Step 1: Extract flashcards using AI vision
     const extractedFlashcards = await extractFlashcards(imageUrl);
 
-    // Step 2: Filter by confidence
     const filteredFlashcards = filterByConfidence(extractedFlashcards, confidenceThreshold);
 
     if (filteredFlashcards.length === 0) {
@@ -254,7 +224,6 @@ async function processImage(imageUrl, options = {}) {
       };
     }
 
-    // Step 3: Validate the filtered flashcards
     const validation = validateExtraction(filteredFlashcards);
 
     if (!validation.isValid && validation.validFlashcards.length === 0) {
@@ -265,7 +234,6 @@ async function processImage(imageUrl, options = {}) {
       };
     }
 
-    // Step 4: Return results
     return {
       success: true,
       flashcards: validation.validFlashcards,
@@ -315,7 +283,7 @@ export {
   filterByConfidence,
   processImage,
   batchProcessImages,
-  AI_GATEWAY_CONFIG,
+  GATEWAY_CONFIG,
 };
 
 export default {
@@ -324,5 +292,5 @@ export default {
   filterByConfidence,
   processImage,
   batchProcessImages,
-  AI_GATEWAY_CONFIG,
+  GATEWAY_CONFIG,
 };
