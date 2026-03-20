@@ -71,15 +71,16 @@ The AI Flashcard Quizzer is a web application that enables users to digitize phy
 - Manage user sign-out
 
 **Key Methods:**
-```typescript
-interface AuthService {
-  initiateLogin(): Promise<void>
-  handleAuthCallback(code: string): Promise<AuthSession>
-  validateSession(): Promise<boolean>
-  refreshSession(): Promise<AuthSession>
-  logout(): Promise<void>
-  getCurrentUser(): Promise<User | null>
-}
+```javascript
+/**
+ * @typedef {Object} AuthService
+ * @property {() => Promise<void>} initiateLogin
+ * @property {(code: string) => Promise<AuthSession>} handleAuthCallback
+ * @property {() => Promise<boolean>} validateSession
+ * @property {() => Promise<AuthSession>} refreshSession
+ * @property {() => Promise<void>} logout
+ * @property {() => Promise<User | null>} getCurrentUser
+ */
 ```
 
 **Integration Points:**
@@ -96,21 +97,23 @@ interface AuthService {
 - Extract text and identify Q&A pairs using AI vision
 - Validate extracted content
 - Handle extraction failures gracefully
-
 **Key Methods:**
-```typescript
-interface ScannerService {
-  uploadImage(file: File): Promise<string> // Returns storage URL
-  extractFlashcards(imageUrl: string): Promise<ExtractedFlashcard[]>
-  validateExtraction(flashcards: ExtractedFlashcard[]): Promise<ValidationResult>
-}
+```javascript
+/**
+ * @typedef {Object} ScannerService
+ * @property {(file: File) => Promise<string>} uploadImage - Returns storage URL
+ * @property {(imageUrl: string) => Promise<ExtractedFlashcard[]>} extractFlashcards
+ * @property {(flashcards: ExtractedFlashcard[]) => Promise<ValidationResult>} validateExtraction
+ */
 
-interface ExtractedFlashcard {
-  question: string
-  answer: string
-  confidence: number // 0-1
-  sourceImageUrl: string
-}
+/**
+ * @typedef {Object} ExtractedFlashcard
+ * @property {string} question
+ * @property {string} answer
+ * @property {number} confidence - 0-1
+ * @property {string} sourceImageUrl
+ */
+```
 ```
 
 **Integration Points:**
@@ -124,21 +127,23 @@ interface ExtractedFlashcard {
 
 **Responsibilities:**
 - Assign flashcards to existing modules or create new ones
-- Generate module topic labels
-- Handle module reassignment
-
 **Key Methods:**
-```typescript
-interface ClassifierService {
-  classifyFlashcard(flashcard: Flashcard): Promise<ModuleAssignment>
-  findMatchingModule(flashcard: Flashcard): Promise<Module | null>
-  createModule(topic: string, userId: string): Promise<Module>
-  reassignFlashcard(flashcardId: string, moduleId: string): Promise<void>
-}
+```javascript
+/**
+ * @typedef {Object} ClassifierService
+ * @property {(flashcard: Flashcard) => Promise<ModuleAssignment>} classifyFlashcard
+ * @property {(flashcard: Flashcard) => Promise<Module | null>} findMatchingModule
+ * @property {(topic: string, userId: string) => Promise<Module>} createModule
+ * @property {(flashcardId: string, moduleId: string) => Promise<void>} reassignFlashcard
+ */
 
-interface ModuleAssignment {
-  moduleId: string
-  moduleName: string
+/**
+ * @typedef {Object} ModuleAssignment
+ * @property {string} moduleId
+ * @property {string} moduleName
+ * @property {number} confidence
+ */
+```oduleName: string
   confidence: number
 }
 ```
@@ -154,34 +159,37 @@ interface ModuleAssignment {
 **Responsibilities:**
 - Manage quiz session state and logic
 - Select flashcards based on knowledge scores
-- Generate exercise variations (free recall, multiple choice, fill-in-blank)
-- Evaluate user responses
-- Update knowledge scores
-- Generate session summaries
-
 **Key Methods:**
-```typescript
-interface QuizEngine {
-  startSession(moduleId: string, userId: string, type: 'voice' | 'image'): Promise<QuizSession>
-  getNextQuestion(sessionId: string): Promise<QuizQuestion>
-  submitAnswer(sessionId: string, questionId: string, answer: string): Promise<EvaluationResult>
-  endSession(sessionId: string): Promise<SessionSummary>
-  generateExerciseVariations(flashcard: Flashcard): Promise<ExerciseVariation[]>
-  selectFlashcards(moduleId: string, count: number): Promise<Flashcard[]>
-}
+```javascript
+/**
+ * @typedef {Object} QuizEngine
+ * @property {(moduleId: string, userId: string, type: 'voice' | 'image') => Promise<QuizSession>} startSession
+ * @property {(sessionId: string) => Promise<QuizQuestion>} getNextQuestion
+ * @property {(sessionId: string, questionId: string, answer: string) => Promise<EvaluationResult>} submitAnswer
+ * @property {(sessionId: string) => Promise<SessionSummary>} endSession
+ * @property {(flashcard: Flashcard) => Promise<ExerciseVariation[]>} generateExerciseVariations
+ * @property {(moduleId: string, count: number) => Promise<Flashcard[]>} selectFlashcards
+ */
 
-interface QuizQuestion {
-  id: string
-  flashcardId: string
-  type: 'free_recall' | 'multiple_choice' | 'fill_in_blank'
-  question: string
-  options?: string[] // For multiple choice
-  correctAnswer: string
-  imageUrl?: string // For image quizzes
-}
+/**
+ * @typedef {Object} QuizQuestion
+ * @property {string} id
+ * @property {string} flashcardId
+ * @property {'free_recall' | 'multiple_choice' | 'fill_in_blank'} type
+ * @property {string} question
+ * @property {string[]} [options] - For multiple choice
+ * @property {string} correctAnswer
+ * @property {string} [imageUrl] - For image quizzes
+ */
 
-interface EvaluationResult {
-  isCorrect: boolean
+/**
+ * @typedef {Object} EvaluationResult
+ * @property {boolean} isCorrect
+ * @property {number} scoreChange
+ * @property {string} feedback
+ * @property {string} correctAnswer
+ */
+```sCorrect: boolean
   scoreChange: number
   feedback: string
   correctAnswer: string
@@ -196,18 +204,19 @@ interface EvaluationResult {
 
 ---
 
-### 5. Speech Service (ElevenLabs Integration)
-
-**Responsibilities:**
-- Synthesize speech for quiz questions and feedback
-- Capture and transcribe user voice responses
-- Manage real-time speech connection
-- Handle connection interruptions
-
 **Key Methods:**
-```typescript
-interface SpeechService {
-  synthesizeAndSpeak(text: string): Promise<void>
+```javascript
+/**
+ * @typedef {Object} SpeechService
+ * @property {(text: string) => Promise<void>} synthesizeAndSpeak
+ * @property {() => Promise<void>} startListening
+ * @property {() => Promise<string>} stopListening - Returns transcribed text
+ * @property {(userName: string, moduleName: string) => Promise<void>} greetUser
+ * @property {(summary: SessionSummary) => Promise<void>} summarizeSession
+ * @property {() => boolean} isConnected
+ * @property {() => Promise<void>} reconnect
+ */
+```ynthesizeAndSpeak(text: string): Promise<void>
   startListening(): Promise<void>
   stopListening(): Promise<string> // Returns transcribed text
   greetUser(userName: string, moduleName: string): Promise<void>
@@ -222,14 +231,15 @@ interface SpeechService {
 - WebSocket for bidirectional communication
 - Browser Web Audio API for microphone access
 
----
-
-### 6. Image Service
-
-**Responsibilities:**
-- Generate contextually relevant images for quiz questions
-- Handle image generation failures
-- Cache generated images
+**Key Methods:**
+```javascript
+/**
+ * @typedef {Object} ImageService
+ * @property {(question: string, context: string) => Promise<string>} generateImage - Returns image URL
+ * @property {(questionId: string, imageUrl: string) => Promise<void>} cacheImage
+ * @property {(questionId: string) => Promise<string | null>} getCachedImage
+ */
+```ache generated images
 
 **Key Methods:**
 ```typescript
@@ -245,20 +255,22 @@ interface ImageService {
 - Vercel Storage (image caching)
 - Firestore (cache metadata)
 
----
-
-### 7. Canva Service (MCP Integration)
-
-**Responsibilities:**
-- Invoke Canva MCP via Civic.ai
-- Generate explanation presentations
-- Provide presentation links to users
-- Handle generation failures
-
 **Key Methods:**
-```typescript
-interface CanvaService {
-  generatePresentation(topic: string, flashcardId?: string): Promise<PresentationResult>
+```javascript
+/**
+ * @typedef {Object} CanvaService
+ * @property {(topic: string, flashcardId?: string) => Promise<PresentationResult>} generatePresentation
+ * @property {(presentationId: string) => Promise<string>} getPresentationLink
+ */
+
+/**
+ * @typedef {Object} PresentationResult
+ * @property {string} presentationId
+ * @property {string} editLink
+ * @property {string} viewLink
+ * @property {'pending' | 'ready' | 'failed'} status
+ */
+```eneratePresentation(topic: string, flashcardId?: string): Promise<PresentationResult>
   getPresentationLink(presentationId: string): Promise<string>
 }
 
@@ -304,92 +316,97 @@ interface PresentationResult {
 - `POST /api/quiz/:sessionId/answer` - Submit answer
 - `POST /api/quiz/:sessionId/end` - End session
 - `GET /api/quiz/:sessionId/summary` - Get session summary
-
-### Canva Routes
-- `POST /api/canva/generate` - Request presentation generation
-- `GET /api/canva/:presentationId/status` - Check generation status
-- `GET /api/canva/:presentationId/link` - Get presentation link
-
----
-
-## Data Models and Firestore Structure
-
-### Collections
-
 #### `users`
-```typescript
-interface User {
+```javascript
+/**
+ * @typedef {Object} User
+ * @property {string} id - Civic.ai user ID
+ * @property {string} email
+ * @property {string} name
+ * @property {Timestamp} createdAt
+ * @property {Timestamp} lastLoginAt
+ * @property {Object} preferences
+ * @property {'voice' | 'image' | 'mixed'} preferences.quizType
+ * @property {number} preferences.speechRate - 0.5-2.0
+ * @property {'light' | 'dark'} preferences.theme
+ */
+```erface User {
   id: string // Civic.ai user ID
-  email: string
-  name: string
-  createdAt: Timestamp
-  lastLoginAt: Timestamp
-  preferences: {
-    quizType: 'voice' | 'image' | 'mixed'
-    speechRate: number // 0.5-2.0
-    theme: 'light' | 'dark'
-  }
-}
-```
-
 #### `modules`
+```javascript
+/**
+ * @typedef {Object} Module
+ * @property {string} id
+ * @property {string} userId
+ * @property {string} name
+ * @property {string} description
+ * @property {Timestamp} createdAt
+ * @property {Timestamp} updatedAt
+ * @property {number} flashcardCount
+ * @property {number} aggregateKnowledgeScore - Mean of all flashcard scores
+ * @property {string} [color] - For UI categorization
+ */
 ```typescript
-interface Module {
-  id: string
-  userId: string
-  name: string
-  description: string
-  createdAt: Timestamp
-  updatedAt: Timestamp
-  flashcardCount: number
-  aggregateKnowledgeScore: number // Mean of all flashcard scores
-  color?: string // For UI categorization
-}
-```
-
 #### `flashcards`
-```typescript
-interface Flashcard {
-  id: string
-  userId: string
-  moduleId: string
-  question: string
-  answer: string
-  knowledgeScore: number // 0-100, initialized to 0
-  sourceImageUrl: string
-  createdAt: Timestamp
-  updatedAt: Timestamp
-  lastReviewedAt?: Timestamp
-  reviewCount: number
-  correctCount: number
-  incorrectCount: number
-}
-```
-
+```javascript
+/**
+ * @typedef {Object} Flashcard
+ * @property {string} id
+ * @property {string} userId
+ * @property {string} moduleId
+ * @property {string} question
+ * @property {string} answer
+ * @property {number} knowledgeScore - 0-100, initialized to 0
+ * @property {string} sourceImageUrl
+ * @property {Timestamp} createdAt
+ * @property {Timestamp} updatedAt
+ * @property {Timestamp} [lastReviewedAt]
+ * @property {number} reviewCount
+ * @property {number} correctCount
+ * @property {number} incorrectCount
+ */
+```serId: string
 #### `quiz_sessions`
-```typescript
-interface QuizSession {
-  id: string
-  userId: string
-  moduleId: string
-  type: 'voice' | 'image'
-  startedAt: Timestamp
-  endedAt?: Timestamp
-  status: 'active' | 'paused' | 'completed' | 'abandoned'
-  flashcardIds: string[]
-  currentFlashcardIndex: number
-  responses: QuizResponse[]
-  scoreChanges: { [flashcardId: string]: number }
-}
+```javascript
+/**
+ * @typedef {Object} QuizSession
+ * @property {string} id
+ * @property {string} userId
+ * @property {string} moduleId
+ * @property {'voice' | 'image'} type
+ * @property {Timestamp} startedAt
+ * @property {Timestamp} [endedAt]
+ * @property {'active' | 'paused' | 'completed' | 'abandoned'} status
+ * @property {string[]} flashcardIds
+ * @property {number} currentFlashcardIndex
+ * @property {QuizResponse[]} responses
+ * @property {Object.<string, number>} scoreChanges
+ */
 
-interface QuizResponse {
-  flashcardId: string
-  questionType: 'free_recall' | 'multiple_choice' | 'fill_in_blank'
-  userAnswer: string
-  isCorrect: boolean
-  scoreChange: number
-  timestamp: Timestamp
-}
+/**
+ * @typedef {Object} QuizResponse
+ * @property {string} flashcardId
+ * @property {'free_recall' | 'multiple_choice' | 'fill_in_blank'} questionType
+ * @property {string} userAnswer
+ * @property {boolean} isCorrect
+ * @property {number} scoreChange
+ * @property {Timestamp} timestamp
+ */
+#### `presentations` (Canva)
+```javascript
+/**
+ * @typedef {Object} Presentation
+ * @property {string} id
+ * @property {string} userId
+ * @property {string} [flashcardId]
+ * @property {string} topic
+ * @property {string} canvaId
+ * @property {string} editLink
+ * @property {string} viewLink
+ * @property {'pending' | 'ready' | 'failed'} status
+ * @property {Timestamp} createdAt
+ * @property {Timestamp} expiresAt
+ */
 ```
 
 #### `presentations` (Canva)
@@ -745,31 +762,31 @@ Dashboard (Module List)
 
 ## Testing Strategy
 
+### Dual Testing Approach
+
+This feature requires both unit/integration tests and property-based tests for comprehensive coverage:
+
+- **Unit Tests**: Verify specific examples, edge cases, and error conditions
+- **Property Tests**: Verify universal properties across all inputs
+- **Together**: Comprehensive coverage (unit tests catch concrete bugs, property tests verify general correctness)
+
 ### Unit Testing
-- **Auth Service**: Test login flow, session validation, logout
-- **Scanner Service**: Test image upload, extraction, validation
-- **Classifier Service**: Test module assignment, topic generation
-- **Quiz Engine**: Test question selection, scoring logic, session management
-- **Speech Service**: Test speech synthesis, transcription, connection handling
-- **Image Service**: Test image generation, caching
-- **Canva Service**: Test presentation generation, link retrieval
 
-### Integration Testing
-- **Auth → Dashboard**: Test full login flow and dashboard load
-- **Upload → Classify → Quiz**: Test end-to-end flashcard creation and quiz
-- **Quiz → Scoring**: Test knowledge score updates and persistence
-- **Speech → Evaluation**: Test voice input capture and response evaluation
-- **Image Generation → Display**: Test image generation and quiz display
+**Auth Service**
+- Test login flow with valid Civic.ai credentials
+- Test session validation and refresh
+- Test logout and session invalidation
+- Test error handling for failed auth
 
-### Property-Based Testing
-- [Properties to be defined after prework analysis]
+**Scanner Service**
+- Test image upload with valid formats (JPEG, PNG, WEBP)
+- Test rejection of unsupported formats
+- Test rejection of files >20MB
+- Test extraction with images containing recognizable content
+- Test error handling when no content is found
 
-### Performance Testing
-- **Page Load**: Verify initial content renders within 3 seconds
-- **Speech Latency**: Verify speech output latency <1 second
-- **Quiz Responsiveness**: Verify quiz interactions respond within 500ms
-- **Concurrent Users**: Load test with 100+ concurrent users
-
+**Classifier Service**
+- Test module assignment for flashcards with ma
 ### Error Scenario Testing
 - **Network Failures**: Simulate network interruptions; verify graceful recovery
 - **Service Unavailability**: Mock external service failures; verify fallbacks

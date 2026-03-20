@@ -18,46 +18,48 @@ This document breaks down the AI Flashcard Quizzer specification into concrete, 
 - [x] I created a GitHub repo called `duckida/mirai-flashcards`, initialize that as the repo
 
 - [x] Now that I have the github setup, teach me how to setup Vercel
-- [ ] Configure Vercel Storage for image uploads
-- [ ] Set up Firestore project and authentication
-- [ ] Configure Firebase Admin SDK for backend
+
+- [x] Deploy the backend to Vercel using the CLI
+- [x] Configure Vercel Storage for image uploads
+- [x] Set up Firestore project and authentication
+- [x] Configure Firebase Admin SDK for backend
 
 
 
 ### 1.3 External Service Configuration
-- [ ] Register and configure Civic.ai OAuth application
-- [ ] Set up ElevenLabs API account and credentials
-- [ ] Configure Canva MCP integration via Civic.ai
+- [x] Register and configure Civic.ai OAuth application. Docs of Civic are fonud at `https://raw.githubusercontent.com/civicteam/demos/refs/heads/main/apps/civic-auth-demo/README.md`. My CIVIC_CLIENT_ID=a141d53d-9b85-41b5-8590-38a27caaf582
+- [x] Set up ElevenLabs API account and credentials
+- [x] Configure Canva MCP integration via Civic.ai
 - [ ] Set up AI Vision API (Vercel AI SDK)
-- [ ] Set up AI Image Generation API (DALL-E or similar)
-- [ ] Set up AI Classification API for module assignment
+- [ ] Set up AI Image Generation API (Vercel AI SDK)
+- [ ] Set up AI Classification API (Vercel AI SDK) for module assignment
 
 ---
 
 ## Phase 2: Authentication and User Management
 
 ### 2.1 Authentication Service Implementation
-- [ ] Implement Civic.ai OAuth flow in JavaScript
-- [ ] Create `/api/auth/login` endpoint
-- [ ] Create `/api/auth/callback` endpoint for OAuth callback
-- [ ] Implement session management with secure HTTP-only cookies
-- [ ] Create `/api/auth/logout` endpoint
-- [ ] Create `/api/auth/session` endpoint for session validation
-- [ ] Implement session refresh logic
+- [x] Implement Civic.ai OAuth flow in JavaScript
+- [x] Create `/api/auth/login` endpoint
+- [x] Create `/api/auth/callback` endpoint for OAuth callback
+- [x] Implement session management with secure HTTP-only cookies
+- [x] Create `/api/auth/logout` endpoint
+- [x] Create `/api/auth/session` endpoint for session validation
+- [x] Implement session refresh logic
 
 ### 2.2 User Data Management
-- [ ] Create Firestore `users` collection schema
-- [ ] Implement user document creation on first login
-- [ ] Implement user preferences storage (quiz type, speech rate, theme)
-- [ ] Create user profile retrieval service
-- [ ] Implement user preference update endpoints
+- [x] Create Firestore `users` collection schema
+- [x] Implement user document creation on first login
+- [x] Implement user preferences storage (quiz type, speech rate, theme)
+- [x] Create user profile retrieval service
+- [x] Implement user preference update endpoints
 
 ### 2.3 Authentication UI
-- [ ] Create Authentication Screen with Civic.ai login button
-- [ ] Implement error messaging for failed authentication
-- [ ] Implement loading state during OAuth flow
-- [ ] Create session validation middleware for protected routes
-- [ ] Implement automatic redirect to login for unauthenticated users
+- [x] Create Authentication Screen with Civic.ai login button
+- [x] Implement error messaging for failed authentication
+- [x] Implement loading state during OAuth flow
+- [x] Create session validation middleware for protected routes
+- [x] Implement automatic redirect to login for unauthenticated users
 
 ---
 
