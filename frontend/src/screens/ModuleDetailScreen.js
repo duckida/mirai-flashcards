@@ -14,12 +14,14 @@ const flashcardService = require('../services/flashcardService');
 const apiClient = require('../services/apiClient');
 
 function FlashcardCard({ flashcard, onEdit, onDelete, onToggle, isExpanded }) {
+  const score = flashcard.knowledgeScore || 0;
   const scoreColor =
-    flashcard.knowledgeScore >= 70
-      ? '$success'
-      : flashcard.knowledgeScore >= 40
-        ? '$warning'
-        : '$error';
+    score >= 70 ? '$success' : score >= 40 ? '$warning' : '$error';
+
+  const reviewCount = flashcard.reviewCount || 0;
+  const correctCount = flashcard.correctCount || 0;
+  const incorrectCount = flashcard.incorrectCount || 0;
+  const accuracy = reviewCount > 0 ? Math.round((correctCount / reviewCount) * 100) : null;
 
   return (
     <Card
@@ -41,7 +43,7 @@ function FlashcardCard({ flashcard, onEdit, onDelete, onToggle, isExpanded }) {
               borderRadius="$2"
             >
               <Text fontSize="$1" color="white" fontWeight="bold">
-                {flashcard.knowledgeScore || 0}%
+                {score}%
               </Text>
             </XStack>
             <Text fontSize="$2" color="$textSecondary">
@@ -87,11 +89,44 @@ function FlashcardCard({ flashcard, onEdit, onDelete, onToggle, isExpanded }) {
         <YStack height={4} backgroundColor="$backgroundHover" borderRadius="$round" overflow="hidden">
           <YStack
             height="100%"
-            width={`${Math.min(flashcard.knowledgeScore || 0, 100)}%`}
+            width={`${Math.min(score, 100)}%`}
             backgroundColor={scoreColor}
             borderRadius="$round"
           />
         </YStack>
+
+        {/* Review stats */}
+        {reviewCount > 0 && (
+          <XStack gap="$4" justifyContent="space-between">
+            <XStack gap="$1" alignItems="center">
+              <Text fontSize="$1" color="$textSecondary">
+                Reviews:
+              </Text>
+              <Text fontSize="$1" color="$textPrimary" fontWeight="600">
+                {reviewCount}
+              </Text>
+            </XStack>
+            <XStack gap="$1" alignItems="center">
+              <Text fontSize="$1" color="$success">
+                {correctCount} correct
+              </Text>
+              <Text fontSize="$1" color="$textSecondary">
+                /
+              </Text>
+              <Text fontSize="$1" color="$error">
+                {incorrectCount} incorrect
+              </Text>
+            </XStack>
+            <XStack gap="$1" alignItems="center">
+              <Text fontSize="$1" color="$textSecondary">
+                Accuracy:
+              </Text>
+              <Text fontSize="$1" fontWeight="600" color={accuracy >= 70 ? '$success' : accuracy >= 40 ? '$warning' : '$error'}>
+                {accuracy}%
+              </Text>
+            </XStack>
+          </XStack>
+        )}
       </YStack>
     </Card>
   );

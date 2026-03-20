@@ -166,31 +166,31 @@ This document breaks down the AI Flashcard Quizzer specification into concrete, 
 ## Phase 6: Knowledge Scoring System
 
 ### 6.1 Knowledge Score Initialization and Storage
-- [ ] Initialize new flashcards with knowledge score of 0
-- [ ] Store knowledge scores in Firestore
-- [ ] Implement knowledge score retrieval
-- [ ] Create knowledge score update logic
+- [x] Initialize new flashcards with knowledge score of 0
+- [x] Store knowledge scores in Firestore
+- [x] Implement knowledge score retrieval
+- [x] Create knowledge score update logic
 
 ### 6.2 Score Update Logic
-- [ ] Implement correct answer score increase (1-10 points)
-- [ ] Implement incorrect answer score decrease (1-10 points)
-- [ ] Enforce minimum score of 0 (no negative scores)
-- [ ] Enforce maximum score of 100
-- [ ] Implement confidence-based score adjustments
-- [ ] Create score change persistence
+- [x] Implement correct answer score increase (1-10 points)
+- [x] Implement incorrect answer score decrease (1-10 points)
+- [x] Enforce minimum score of 0 (no negative scores)
+- [x] Enforce maximum score of 100
+- [x] Implement confidence-based score adjustments
+- [x] Create score change persistence
 
 ### 6.3 Module Aggregate Scoring
-- [ ] Implement module aggregate score calculation (mean of flashcard scores)
-- [ ] Create denormalized aggregate score storage on module document
-- [ ] Implement aggregate score update on flashcard score changes
-- [ ] Implement aggregate score recalculation on flashcard deletion
-- [ ] Display module aggregate score on dashboard
+- [x] Implement module aggregate score calculation (mean of flashcard scores)
+- [x] Create denormalized aggregate score storage on module document
+- [x] Implement aggregate score update on flashcard score changes
+- [x] Implement aggregate score recalculation on flashcard deletion
+- [x] Display module aggregate score on dashboard
 
 ### 6.4 Knowledge Score Display
-- [ ] Display individual flashcard knowledge scores in module view
-- [ ] Display module aggregate score on dashboard
-- [ ] Create visual score indicators (progress bars, badges)
-- [ ] Implement score history tracking (optional)
+- [x] Display individual flashcard knowledge scores in module view
+- [x] Display module aggregate score on dashboard
+- [x] Create visual score indicators (progress bars, badges)
+- [x] Implement score history tracking (optional)
 
 ---
 

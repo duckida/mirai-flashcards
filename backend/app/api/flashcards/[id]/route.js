@@ -1,10 +1,64 @@
 /**
- * Flashcard Individual API Routes
- * PATCH  /api/flashcards/:id - Update flashcard
- * DELETE /api/flashcards/:id - Delete flashcard
+ * Flashcard API Routes
+ * GET    /api/flashcards/:id - Retrieve all flashcards in a module (id = moduleId)
+ * PATCH  /api/flashcards/:id - Update a flashcard (id = flashcardId)
+ * DELETE /api/flashcards/:id - Delete a flashcard (id = flashcardId)
  */
 
 import { getFirestore } from '@/lib/firebase/admin.js';
+import { recalculateModuleAggregate } from '@/lib/services/scoringService.js';
+
+/**
+ * GET handler - Get flashcards for a module
+ * The :id param is treated as a moduleId
+ */
+export async function GET(request, { params }) {
+  try {
+    const { id } = await params;
+
+    if (!id) {
+      return Response.json(
+        { success: false, error: 'Module ID is required' },
+        { status: 400 }
+      );
+    }
+
+    const db = getFirestore();
+
+    // Verify module exists
+    const moduleDoc = await db.collection('modules').doc(id).get();
+    if (!moduleDoc.exists) {
+      return Response.json(
+        { success: false, error: 'Module not found' },
+        { status: 404 }
+      );
+    }
+
+    // Get flashcards ordered by knowledge score ascending (weakest first)
+    const snapshot = await db
+      .collection('flashcards')
+      .where('moduleId', '==', id)
+      .orderBy('knowledgeScore', 'asc')
+      .get();
+
+    const flashcards = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    return Response.json({
+      success: true,
+      module: { id: moduleDoc.id, ...moduleDoc.data() },
+      flashcards,
+    });
+  } catch (error) {
+    console.error('Get module flashcards error:', error);
+    return Response.json(
+      { success: false, error: 'Failed to retrieve flashcards', details: error.message },
+      { status: 500 }
+    );
+  }
+}
 
 /**
  * PATCH handler - Update a flashcard
@@ -71,24 +125,18 @@ export async function PATCH(request, { params }) {
 
         updates.moduleId = body.moduleId;
 
-        // Decrement old module count
+        // Recalculate old module aggregate score
         if (oldModuleId) {
-          const oldModuleDoc = await db.collection('modules').doc(oldModuleId).get();
-          if (oldModuleDoc.exists) {
-            const oldCount = oldModuleDoc.data().flashcardCount || 0;
-            await db.collection('modules').doc(oldModuleId).update({
-              flashcardCount: Math.max(0, oldCount - 1),
-              updatedAt: new Date(),
-            });
-          }
+          await recalculateModuleAggregate(oldModuleId);
         }
 
-        // Increment new module count
+        // Increment new module count then recalculate aggregate
         const newCount = newModuleDoc.data().flashcardCount || 0;
         await db.collection('modules').doc(body.moduleId).update({
           flashcardCount: newCount + 1,
           updatedAt: new Date(),
         });
+        await recalculateModuleAggregate(body.moduleId);
       }
     }
 
@@ -148,30 +196,9 @@ export async function DELETE(request, { params }) {
     // Delete the flashcard
     await db.collection('flashcards').doc(id).delete();
 
-    // Update module flashcard count and recalculate aggregate score
+    // Recalculate module aggregate score after deletion
     if (moduleId) {
-      const moduleDoc = await db.collection('modules').doc(moduleId).get();
-      if (moduleDoc.exists) {
-        const currentCount = moduleDoc.data().flashcardCount || 0;
-        const newCount = Math.max(0, currentCount - 1);
-
-        let aggregateKnowledgeScore = 0;
-        if (newCount > 0) {
-          const remainingSnapshot = await db
-            .collection('flashcards')
-            .where('moduleId', '==', moduleId)
-            .get();
-          const remaining = remainingSnapshot.docs.map((doc) => doc.data());
-          const totalScore = remaining.reduce((sum, card) => sum + (card.knowledgeScore || 0), 0);
-          aggregateKnowledgeScore = Math.round(totalScore / remaining.length);
-        }
-
-        await db.collection('modules').doc(moduleId).update({
-          flashcardCount: newCount,
-          aggregateKnowledgeScore,
-          updatedAt: new Date(),
-        });
-      }
+      await recalculateModuleAggregate(moduleId);
     }
 
     return Response.json({
@@ -195,7 +222,7 @@ export async function OPTIONS() {
     status: 200,
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'PATCH, DELETE, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, PATCH, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     },
   });

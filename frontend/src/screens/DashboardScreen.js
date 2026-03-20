@@ -160,6 +160,58 @@ function DashboardScreen({ onNavigate, screens }) {
         </Card>
       )}
 
+      {/* Overall Knowledge Summary */}
+      {modules.length > 0 && (() => {
+        const totalCards = modules.reduce((sum, m) => sum + (m.flashcardCount || 0), 0);
+        const totalScore = modules.reduce((sum, m) => sum + (m.aggregateKnowledgeScore || 0) * (m.flashcardCount || 0), 0);
+        const overallAvg = totalCards > 0 ? Math.round(totalScore / totalCards) : 0;
+        const overallColor = overallAvg >= 70 ? '$success' : overallAvg >= 40 ? '$warning' : '$error';
+
+        return (
+          <Card elevate padding="$4" marginBottom="$4" backgroundColor="$cardBackground" borderColor="$borderColor">
+            <YStack gap="$3">
+              <Text fontSize="$4" fontWeight="bold" color="$textPrimary">
+                Knowledge Overview
+              </Text>
+              <XStack justifyContent="space-between" alignItems="center">
+                <YStack alignItems="center" gap="$1" flex={1}>
+                  <Text fontSize="$6" fontWeight="bold" color="$textPrimary">
+                    {totalCards}
+                  </Text>
+                  <Text fontSize="$2" color="$textSecondary">
+                    Total Cards
+                  </Text>
+                </YStack>
+                <YStack alignItems="center" gap="$1" flex={1}>
+                  <Text fontSize="$6" fontWeight="bold" color={overallColor}>
+                    {overallAvg}%
+                  </Text>
+                  <Text fontSize="$2" color="$textSecondary">
+                    Avg Score
+                  </Text>
+                </YStack>
+                <YStack alignItems="center" gap="$1" flex={1}>
+                  <Text fontSize="$6" fontWeight="bold" color="$primary">
+                    {modules.length}
+                  </Text>
+                  <Text fontSize="$2" color="$textSecondary">
+                    Modules
+                  </Text>
+                </YStack>
+              </XStack>
+              <YStack height={8} backgroundColor="$backgroundHover" borderRadius="$round" overflow="hidden">
+                <YStack
+                  height="100%"
+                  width={`${Math.min(overallAvg, 100)}%`}
+                  backgroundColor={overallColor}
+                  borderRadius="$round"
+                />
+              </YStack>
+            </YStack>
+          </Card>
+        );
+      })()}
+
       {/* Modules Section */}
       <ScrollView flex={1}>
         <YStack gap="$4">
