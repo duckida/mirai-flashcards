@@ -82,6 +82,7 @@ export async function startSession(userId, moduleId, type, cardCount = 10, speci
     type,
     status: 'active',
     flashcardIds,
+    preGeneratedQuestions,
     currentFlashcardIndex: 0,
     flashcardCount: flashcardIds.length,
   };
