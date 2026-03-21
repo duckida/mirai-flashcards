@@ -7,7 +7,7 @@ import { Spinner } from '@/components/ui/spinner'
 import useAuth from '@/hooks/useAuth'
 import { moduleService } from '@/services/moduleService'
 
-function FlashcardCard({ flashcard, isExpanded, onToggle }) {
+function FlashcardCard({ flashcard, isExpanded, onToggle, onVoiceQuiz, onTextQuiz }) {
   const score = flashcard.knowledgeScore || 0
   const variant = score >= 70 ? 'success' : score >= 40 ? 'warning' : 'error'
   const color = score >= 70 ? 'bg-success' : score >= 40 ? 'bg-warning' : 'bg-error'
@@ -25,21 +25,13 @@ function FlashcardCard({ flashcard, isExpanded, onToggle }) {
           </Button>
         </div>
 
-        <div className="p-3 bg-bg-muted rounded-xl mb-2">
-          <div className="flex items-center gap-1.5 mb-1">
-            <div className="w-5 h-5 rounded-md bg-primary flex items-center justify-center text-white font-bold text-xs">Q</div>
-            <span className="text-xs text-text-muted font-semibold uppercase tracking-wide">Question</span>
-          </div>
-          <div className="text-text-primary">{flashcard.question}</div>
-        </div>
-
-        {isExpanded && (
-          <div className="p-3 bg-primary-lighter rounded-xl mb-2">
-            <div className="flex items-center gap-1.5 mb-1">
-              <div className="w-5 h-5 rounded-md bg-primary flex items-center justify-center text-white font-bold text-xs">A</div>
-              <span className="text-xs text-primary font-semibold uppercase tracking-wide">Answer</span>
-            </div>
-            <div className="text-text-primary">{flashcard.answer}</div>
+        {flashcard.sourceImageUrl && (
+          <div className="rounded-xl overflow-hidden bg-bg-muted">
+            <img 
+              src={flashcard.sourceImageUrl} 
+              alt="Flashcard" 
+              className="w-full max-w-md mx-auto"
+            />
           </div>
         )}
 
@@ -52,6 +44,25 @@ function FlashcardCard({ flashcard, isExpanded, onToggle }) {
             <span className="text-error">✗ {flashcard.incorrectCount || 0}</span>
           </div>
         )}
+
+        <div className="flex gap-2 mt-3">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex-1"
+            onClick={() => onVoiceQuiz?.(flashcard)}
+          >
+            🎤 Voice Quiz
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex-1"
+            onClick={() => onTextQuiz?.(flashcard)}
+          >
+            📝 Text Quiz
+          </Button>
+        </div>
       </CardContent>
     </Card>
   )
@@ -147,28 +158,11 @@ export default function ModuleDetailScreen({ moduleId, onBack, onNavigate }) {
                 flashcard={card}
                 isExpanded={expandedCardId === card.id}
                 onToggle={(id) => setExpandedCardId(expandedCardId === id ? null : id)}
+                onVoiceQuiz={(card) => onNavigate?.('voice_quiz', moduleId, card, module?.name)}
+                onTextQuiz={(card) => onNavigate?.('text_quiz', moduleId, card)}
               />
             ))
           )}
-        </div>
-
-        <div className="flex gap-3 flex-wrap">
-          <Button
-            className="flex-1 min-w-[140px]"
-            size="lg"
-            disabled={flashcards.length === 0}
-            onClick={() => onNavigate?.('voice_quiz', moduleId)}
-          >
-            🎤 Voice Quiz
-          </Button>
-          <Button
-            className="flex-1 min-w-[140px]"
-            size="lg"
-            disabled={flashcards.length === 0}
-            onClick={() => onNavigate?.('image_quiz', moduleId)}
-          >
-            🖼️ Image Quiz
-          </Button>
         </div>
       </main>
     </div>
