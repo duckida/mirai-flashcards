@@ -52,7 +52,11 @@ vi.mock('@/services/apiClient', () => ({
 
 // Mock navigator.mediaDevices
 Object.defineProperty(global.navigator, 'mediaDevices', {
-  value: { getUserMedia: vi.fn().mockResolvedValue({}) },
+  value: {
+    getUserMedia: vi.fn().mockResolvedValue({
+      getTracks: () => [{ stop: vi.fn() }],
+    }),
+  },
   writable: true,
 })
 
@@ -67,7 +71,10 @@ const nonEmptyString = fc.string({ minLength: 1, maxLength: 200 })
 
 const flashcardArbitrary = fc.record({
   id: fc.uuid(),
-  content: nonEmptyString,
+  content: fc
+    .string({ minLength: 1, maxLength: 200 })
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0),
 })
 
 const moduleNameArbitrary = nonEmptyString

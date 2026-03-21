@@ -282,6 +282,19 @@ This document breaks down the AI Flashcard Quizzer specification into concrete, 
 - [x] Create performance alerts for latency >1 second
 - [x] Implement caching for common phrases
 
+### 8.6 Voice Agent Reliable (ElevenLabs Conversational AI SDK)
+- [x] Implement WebSocket connection establishment via Conversation.startSession with signed URL
+- [x] Create connection status display (idle, connecting, connected, disconnected)
+- [x] Implement real-time conversation transcript with Agent/You message distinction
+- [x] Implement unexpected disconnect handling with reconnect dialog
+- [x] Implement intentional session termination with End button and session finalization
+- [x] Integrate quiz session creation via POST /api/quiz/start on connection
+- [x] Implement React StrictMode resilience with mounted flag and duplicate connection prevention
+- [x] Implement proper resource cleanup on unmount (no endSession call to avoid WebSocket errors)
+- [x] Implement error handling for microphone permissions, signed URL failures, and connection errors
+- [x] Use dynamic import for ElevenLabs SDK to optimize bundle size
+- [x] Create VoiceQuizScreen.jsx with all UI components using shadcn/ui
+
 ---
 
 ## Phase 9: Image-Based Quiz Implementation

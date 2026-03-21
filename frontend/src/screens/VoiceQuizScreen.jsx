@@ -1,222 +1,306 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
 import { apiClient } from '@/services/apiClient'
 import { quizService } from '@/services/quizService'
 
-// Task 2.2: Accept moduleName prop directly — no secondary module fetch needed
-// Task 4.1: Add userId and onComplete props
+function StatusIcon({ status }) {
+  switch (status) {
+    case 'connecting':
+      return (
+        <div className="w-20 h-20 rounded-full bg-warning-light flex items-center justify-center animate-pulse">
+          <span className="text-3xl">⏳</span>
+        </div>
+      )
+    case 'connected':
+      return (
+        <div className="w-20 h-20 rounded-full bg-success-light flex items-center justify-center">
+          <span className="text-3xl">🎙️</span>
+        </div>
+      )
+    case 'disconnected':
+      return (
+        <div className="w-20 h-20 rounded-full bg-error-light flex items-center justify-center">
+          <span className="text-3xl">📵</span>
+        </div>
+      )
+    default:
+      return (
+        <div className="w-20 h-20 rounded-full bg-bg-muted flex items-center justify-center">
+          <span className="text-3xl">🎤</span>
+        </div>
+      )
+  }
+}
+
+function StatusLabel({ status }) {
+  switch (status) {
+    case 'connecting':
+      return <span className="text-warning font-semibold text-lg">Connecting...</span>
+    case 'connected':
+      return <span className="text-success font-semibold text-lg">Connected</span>
+    case 'disconnected':
+      return <span className="text-error font-semibold text-lg">Disconnected</span>
+    default:
+      return <span className="text-text-secondary font-semibold text-lg">Ready to connect</span>
+  }
+}
+
+function TranscriptMessage({ message }) {
+  const isAgent = message.role === 'agent'
+  return (
+    <div className={`flex ${isAgent ? 'justify-start' : 'justify-end'} mb-3`}>
+      <div
+        className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+          isAgent
+            ? 'bg-bg-muted text-text-primary rounded-bl-sm'
+            : 'bg-primary text-white rounded-br-sm'
+        }`}
+      >
+        <div className={`text-xs font-semibold mb-1 ${isAgent ? 'text-text-muted' : 'text-white/70'}`}>
+          {isAgent ? 'Agent' : 'You'}
+        </div>
+        <div className="text-sm">{message.text}</div>
+      </div>
+    </div>
+  )
+}
+
+function ReconnectDialog({ onReconnect, onEndSession }) {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <Card className="max-w-sm w-full">
+        <CardContent className="pt-6 pb-6">
+          <div className="text-center">
+            <div className="text-3xl mb-3">⚠️</div>
+            <h3 className="text-xl font-bold text-text-primary mb-2">Connection Lost</h3>
+            <p className="text-text-secondary mb-6">
+              Your connection to the voice agent was interrupted. Would you like to reconnect or end your session?
+            </p>
+            <div className="flex gap-3">
+              <Button className="flex-1" onClick={onReconnect}>
+                Reconnect
+              </Button>
+              <Button variant="secondary" className="flex-1" onClick={onEndSession}>
+                End Session
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function ErrorScreen({ error, onRetry, onReturn }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-white p-4">
+      <Card className="max-w-md w-full">
+        <CardContent className="pt-8 pb-8">
+          <div className="text-center">
+            <div className="text-3xl mb-3">❌</div>
+            <h3 className="text-xl font-bold text-error mb-2">Connection Error</h3>
+            <p className="text-text-secondary mb-6">{error}</p>
+            <div className="flex gap-3">
+              {onRetry && (
+                <Button className="flex-1" onClick={onRetry}>
+                  Retry
+                </Button>
+              )}
+              <Button variant="secondary" className="flex-1" onClick={onReturn}>
+                Return
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 export default function VoiceQuizScreen({ moduleId, moduleName, flashcard, userId, onBack, onComplete }) {
-  const [error, setError] = useState(null)
-  const [isConnected, setIsConnected] = useState(false)
-  const [isConnecting, setIsConnecting] = useState(false)
   const [status, setStatus] = useState('idle')
-  const [messages, setMessages] = useState([])
-  // Task 5.1: disconnect dialog state and userEndedRef
-  const [showDisconnectDialog, setShowDisconnectDialog] = useState(false)
+  const [transcript, setTranscript] = useState([])
+  const [error, setError] = useState(null)
+  const [showReconnectDialog, setShowReconnectDialog] = useState(false)
+
+  const mountedRef = useRef(true)
   const conversationRef = useRef(null)
-  const startedRef = useRef(false)
-  // Task 4.2: track created quiz session ID
   const sessionIdRef = useRef(null)
-  // Task 5.1: track whether user intentionally ended the session
-  const userEndedRef = useRef(false)
-  // Track whether onConnect has ever fired for this mount (guards premature disconnect dialog)
-  const hasConnectedRef = useRef(false)
+  const intentionalEndRef = useRef(false)
+  const wasConnectedRef = useRef(false)
+
+  const addMessage = useCallback((role, text) => {
+    if (!mountedRef.current) return
+    setTranscript((prev) => [...prev, { role, text }])
+  }, [])
+
+  const finalizeSession = useCallback(async () => {
+    const sessionId = sessionIdRef.current
+    if (!sessionId) return null
+    try {
+      await quizService.endSession(sessionId)
+      const summaryResult = await quizService.getSessionSummary(sessionId)
+      return summaryResult?.summary || null
+    } catch (err) {
+      console.error('Error finalizing session:', err)
+      return null
+    }
+  }, [])
+
+  const handleEndSession = useCallback(async () => {
+    intentionalEndRef.current = true
+    setShowReconnectDialog(false)
+
+    if (conversationRef.current) {
+      try {
+        await conversationRef.current.endSession()
+      } catch (err) {
+        console.error('Error ending ElevenLabs session:', err)
+      }
+    }
+
+    const summary = await finalizeSession()
+    if (mountedRef.current) {
+      onComplete?.(summary)
+    }
+  }, [finalizeSession, onComplete])
+
+  const handleReconnect = useCallback(() => {
+    setShowReconnectDialog(false)
+    window.location.reload()
+  }, [])
 
   const startVoiceSession = useCallback(async () => {
-    if (!flashcard || startedRef.current) return
-
-    // Task 3.1: Guard against empty content
     if (!flashcard?.content?.trim()) {
       setError('This flashcard has no content to quiz on.')
-      setIsConnecting(false)
-      startedRef.current = false
       return
     }
 
-    startedRef.current = true
-    setIsConnecting(true)
+    setStatus('connecting')
     setError(null)
 
     try {
-      const { Conversation } = await import('@elevenlabs/client')
+      const micStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      micStream.getTracks().forEach((t) => t.stop())
+    } catch {
+      if (mountedRef.current) {
+        setError('Microphone permission is required for voice quizzes. Please allow microphone access and try again.')
+        setStatus('idle')
+      }
+      return
+    }
 
-      // Task 3.3: Pass moduleName from props instead of module?.name
+    try {
       const tokenResult = await apiClient.post('/api/quiz/speech-token', {
         content: flashcard.content,
-        moduleName: moduleName || 'Quiz'
+        moduleName: moduleName || 'General',
       })
 
-      if (!tokenResult.success) throw new Error(tokenResult.error || 'Failed to get speech token')
+      if (!mountedRef.current) return
 
       const { signedUrl } = tokenResult
 
-      await navigator.mediaDevices.getUserMedia({ audio: true })
+      const sessionResult = await quizService.startSession(userId, moduleId, 'voice')
+      if (mountedRef.current && sessionResult?.session?.id) {
+        sessionIdRef.current = sessionResult.session.id
+      }
+
+      if (!mountedRef.current) return
+
+      const { Conversation } = await import('@elevenlabs/client')
 
       const conversation = await Conversation.startSession({
         signedUrl,
         connectionType: 'websocket',
         overrides: {
           agent: {
-            // Task 3.2: Updated prompt with trimmed content
-            prompt: `You are a friendly quiz tutor. Quiz the student on the following flashcard content. Ask questions about it, evaluate their answers, and give helpful feedback.\n\nFlashcard content:\n${flashcard.content.trim()}`,
+            prompt: {
+              prompt: `You are a helpful quiz assistant for the "${moduleName || 'General'}" module. Quiz the user on this flashcard content: "${flashcard.content}". Read the question, wait for their response, and provide encouraging feedback. Keep responses concise.`,
+            },
+            firstMessage: `Hello! Let's study the "${moduleName || 'General'}" module. Here's your first question based on the flashcard: ${flashcard.content}`,
           },
         },
-        onConnect: async () => {
-          hasConnectedRef.current = true
-          setIsConnected(true)
-          setIsConnecting(false)
+        onConnect: () => {
+          if (!mountedRef.current) return
+          wasConnectedRef.current = true
           setStatus('connected')
-          // Task 4.4: Create quiz session on connect (non-fatal)
-          try {
-            const result = await quizService.startSession(userId, moduleId, 'voice', 1)
-            if (result.success && result.sessionId) {
-              sessionIdRef.current = result.sessionId
-            }
-          } catch (err) {
-            console.warn('Failed to create quiz session (non-fatal):', err)
-          }
         },
-        // Task 5.2: Only show disconnect dialog if user didn't intentionally end
         onDisconnect: () => {
-          setIsConnected(false)
-          setStatus('disconnected')
-          if (hasConnectedRef.current && !userEndedRef.current) {
-            setShowDisconnectDialog(true)
+          if (!mountedRef.current) return
+          if (wasConnectedRef.current && !intentionalEndRef.current) {
+            setShowReconnectDialog(true)
           }
+          setStatus('disconnected')
         },
         onMessage: (message) => {
-          setMessages(prev => [...prev, message])
+          if (!mountedRef.current) return
+          if (message.source === 'user') {
+            addMessage('user', message.message)
+          } else {
+            addMessage('agent', message.message)
+          }
         },
         onError: (err) => {
-          console.error('Voice error:', err)
-          setError(err.message || 'Voice connection error')
-          setIsConnecting(false)
-          startedRef.current = false
+          console.error('ElevenLabs error:', err)
+          if (!mountedRef.current) return
+          setError('An error occurred with the voice connection. Please try again.')
+          setStatus('disconnected')
         },
-        onStatusChange: (newStatus) => setStatus(newStatus),
+        onStatusChange: (newStatus) => {
+          if (!mountedRef.current) return
+          if (newStatus === 'connecting') setStatus('connecting')
+          else if (newStatus === 'connected') setStatus('connected')
+          else if (newStatus === 'disconnected') {
+            if (wasConnectedRef.current && !intentionalEndRef.current) {
+              setShowReconnectDialog(true)
+            }
+            setStatus('disconnected')
+          }
+        },
       })
+
+      if (!mountedRef.current) {
+        try {
+          await conversation.endSession()
+        } catch {
+          // component unmounted during connection
+        }
+        return
+      }
 
       conversationRef.current = conversation
     } catch (err) {
-      setError(err.message || 'Failed to start voice session')
-      setIsConnecting(false)
-      startedRef.current = false
+      if (!mountedRef.current) return
+      console.error('Failed to start voice session:', err)
+      setError(err.message || 'Failed to connect to the voice agent. Please try again.')
+      setStatus('idle')
     }
-  }, [flashcard, moduleName, moduleId, userId])
-
-  // Task 4.5: Helper to finalize session (end + get summary + navigate)
-  const finalizeSession = useCallback(async () => {
-    if (sessionIdRef.current) {
-      try {
-        await quizService.endSession(sessionIdRef.current)
-        const summaryResult = await quizService.getSessionSummary(sessionIdRef.current)
-        if (summaryResult.success && onComplete) {
-          onComplete(summaryResult.summary || summaryResult)
-          return
-        }
-      } catch (err) {
-        console.warn('Failed to end session cleanly:', err)
-      }
-    }
-    onBack()
-  }, [onComplete, onBack])
-
-  const endVoiceSession = useCallback(async () => {
-    // Task 5.3: Mark as user-initiated before ending
-    userEndedRef.current = true
-    if (conversationRef.current) {
-      try {
-        await conversationRef.current.endSession()
-      } catch (_) {
-        // Already closed — safe to ignore
-      }
-      conversationRef.current = null
-    }
-    startedRef.current = false
-    await finalizeSession()
-  }, [finalizeSession])
-
-  // Task 5.4: Reconnect after unexpected disconnect
-  const handleReconnect = useCallback(() => {
-    setShowDisconnectDialog(false)
-    startedRef.current = false
-    startVoiceSession()
-  }, [startVoiceSession])
-
-  // Task 5.5: End session after unexpected disconnect (conversation already closed)
-  const handleEndAfterDisconnect = useCallback(async () => {
-    setShowDisconnectDialog(false)
-    startedRef.current = false
-    // Don't call conversationRef.current.endSession() — already disconnected
-    await finalizeSession()
-  }, [finalizeSession])
-
-  // Task 2.4: Trigger on flashcard alone (removed module dependency).
-  // Use a mounted guard so React StrictMode's double-invoke of effects
-  // (which runs cleanup then re-runs the effect) doesn't fire two sessions
-  // or try to close a socket that was already torn down.
-  useEffect(() => {
-    let cancelled = false
-    if (flashcard && !startedRef.current) {
-      // Small defer so that if StrictMode immediately runs cleanup first,
-      // the cancelled flag is set before startVoiceSession does any async work.
-      const id = setTimeout(() => {
-        if (!cancelled) startVoiceSession()
-      }, 0)
-      return () => {
-        cancelled = true
-        clearTimeout(id)
-      }
-    }
-  }, [flashcard, startVoiceSession])
+  }, [flashcard, moduleName, userId, moduleId, addMessage])
 
   useEffect(() => {
+    mountedRef.current = true
     return () => {
-      const conv = conversationRef.current
+      mountedRef.current = false
       conversationRef.current = null
-      startedRef.current = false
-      // Only call endSession if onConnect actually fired — i.e., the WebSocket
-      // reached OPEN state. If hasConnectedRef is false the socket is still
-      // CONNECTING (StrictMode cleanup, rapid nav), and calling endSession()
-      // causes the SDK to attempt sendMessage on a CLOSING socket, producing
-      // "WebSocket is already in CLOSING or CLOSED state."
-      if (conv && hasConnectedRef.current) {
-        try {
-          conv.endSession()
-        } catch (_) {
-          // Already closed — safe to ignore
-        }
-      }
-      hasConnectedRef.current = false
+      sessionIdRef.current = null
+      intentionalEndRef.current = false
+      wasConnectedRef.current = false
     }
   }, [])
 
-  if (!flashcard) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <Spinner size="lg" />
-      </div>
-    )
-  }
+  useEffect(() => {
+    if (flashcard?.content?.trim()) {
+      startVoiceSession()
+    } else {
+      setError('This flashcard has no content to quiz on.')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flashcard?.id])
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white p-4">
-        <Card className="max-w-md w-full">
-          <CardContent className="pt-8 pb-8 text-center">
-            <div className="w-16 h-16 rounded-full bg-error-light flex items-center justify-center mx-auto mb-4 text-3xl">⚠️</div>
-            <h3 className="text-xl font-bold text-error mb-2">Voice Error</h3>
-            <p className="text-text-secondary mb-4">{error}</p>
-            <div className="flex gap-3">
-              <Button variant="secondary" className="flex-1" onClick={onBack}>← Return</Button>
-              <Button className="flex-1" onClick={() => { setError(null); startedRef.current = false; startVoiceSession() }}>Try Again</Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
+  if (error && status === 'idle') {
+    return <ErrorScreen error={error} onRetry={flashcard?.content?.trim() ? startVoiceSession : null} onReturn={onBack} />
   }
 
   return (
@@ -225,81 +309,77 @@ export default function VoiceQuizScreen({ moduleId, moduleName, flashcard, userI
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-primary-lighter flex items-center justify-center text-xl">🎤</div>
           <div>
-            <h1 className="text-xl font-bold text-text-primary">Voice Quiz</h1>
-            {/* Task 2.3: Use moduleName prop directly */}
+            <h1 className="text-xl font-extrabold text-text-primary">Voice Quiz</h1>
             <p className="text-sm text-text-secondary">{moduleName || 'Module'}</p>
           </div>
         </div>
-        <Button variant="destructive" size="sm" onClick={endVoiceSession} disabled={!isConnected}>
-          End
+        <Button variant="secondary" size="sm" onClick={onBack}>
+          ← Back
         </Button>
       </header>
 
-      <main className="flex-1 p-4 max-w-2xl mx-auto w-full flex flex-col items-center justify-center">
-        <Card className="w-full">
-          <CardContent className="pt-8 pb-8 text-center">
-            <div className="flex flex-col items-center gap-6">
-              <div className={`w-32 h-32 rounded-full flex items-center justify-center text-6xl transition-all ${
-                isConnected
-                  ? status === 'speaking' ? 'bg-primary animate-pulse' : 'bg-success'
-                  : isConnecting ? 'bg-warning animate-pulse' : 'bg-border'
-              }`}>
-                {isConnecting ? '⏳' : isConnected ? (status === 'speaking' ? '🎙️' : '👂') : '🎤'}
-              </div>
-
-              <div>
-                <h2 className="text-2xl font-bold text-text-primary mb-2">
-                  {isConnecting ? 'Connecting...' : isConnected ? 'Voice Quiz Active' : 'Ready'}
-                </h2>
-                <p className="text-text-secondary">
-                  {isConnecting
-                    ? 'Allow microphone access...'
-                    : 'Speak with the AI agent about this flashcard'
-                  }
-                </p>
-              </div>
-
-              {isConnected && (
-                <Button variant="destructive" size="lg" onClick={endVoiceSession}>
-                  End Quiz
-                </Button>
+      <main className="flex-1 flex flex-col p-4 max-w-2xl mx-auto w-full">
+        <Card className="mb-4">
+          <CardContent className="pt-6 pb-6">
+            <div className="flex flex-col items-center gap-4">
+              <StatusIcon status={status} />
+              <StatusLabel status={status} />
+              {status === 'connected' && (
+                <p className="text-text-muted text-sm">Speak your answer to the agent</p>
               )}
             </div>
           </CardContent>
         </Card>
 
-        {messages.length > 0 && (
-          <Card className="w-full mt-4">
+        {flashcard?.content && (
+          <Card className="mb-4 border-primary/30">
             <CardContent className="pt-4 pb-4">
-              <h3 className="text-sm font-semibold text-text-secondary mb-2">Conversation</h3>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {messages.map((msg, i) => (
-                  <div key={i} className={`text-sm ${msg.source === 'user' ? 'text-primary' : 'text-text-secondary'}`}>
-                    <span className="font-semibold">{msg.source === 'user' ? 'You: ' : 'Agent: '}</span>
-                    {msg.message}
-                  </div>
-                ))}
-              </div>
+              <div className="text-xs font-semibold text-text-muted mb-1">Current Flashcard</div>
+              <p className="text-sm text-text-primary">{flashcard.content}</p>
             </CardContent>
           </Card>
         )}
-      </main>
 
-      {/* Task 5.6: Disconnect dialog overlay */}
-      {showDisconnectDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="max-w-sm w-full">
-            <CardContent className="pt-8 pb-8 text-center">
-              <div className="w-16 h-16 rounded-full bg-warning-light flex items-center justify-center mx-auto mb-4 text-3xl">⚡</div>
-              <h3 className="text-xl font-bold text-text-primary mb-2">Disconnected</h3>
-              <p className="text-text-secondary mb-6">Your voice session was interrupted. What would you like to do?</p>
-              <div className="flex gap-3">
-                <Button variant="secondary" className="flex-1" onClick={handleEndAfterDisconnect}>End Session</Button>
-                <Button className="flex-1" onClick={handleReconnect}>Reconnect</Button>
-              </div>
+        <div className="flex-1 overflow-y-auto mb-4 min-h-[200px]">
+          {transcript.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-text-muted text-sm">
+                {status === 'connected' ? 'Waiting for conversation...' : 'Conversation will appear here'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {transcript.map((msg, i) => (
+                <TranscriptMessage key={i} message={msg} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {error && status !== 'idle' && (
+          <Card className="mb-4 border-error/30 bg-error-light/50">
+            <CardContent className="pt-3 pb-3">
+              <p className="text-error text-sm">{error}</p>
             </CardContent>
           </Card>
+        )}
+
+        <div className="flex gap-3">
+          {status === 'connected' && (
+            <Button variant="destructive" className="flex-1" size="lg" onClick={handleEndSession}>
+              End
+            </Button>
+          )}
+          {(status === 'disconnected' || status === 'idle') && !error && (
+            <Button variant="secondary" className="flex-1" size="lg" onClick={onBack}>
+              Return
+            </Button>
+          )}
         </div>
+      </main>
+
+      {showReconnectDialog && (
+        <ReconnectDialog onReconnect={handleReconnect} onEndSession={handleEndSession} />
       )}
     </div>
   )
