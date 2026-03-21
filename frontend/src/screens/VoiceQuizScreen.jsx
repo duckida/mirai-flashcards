@@ -130,6 +130,7 @@ export default function VoiceQuizScreen({ moduleId, moduleName, flashcard, userI
   const sessionIdRef = useRef(null)
   const intentionalEndRef = useRef(false)
   const wasConnectedRef = useRef(false)
+  const sessionGenerationRef = useRef(0)
 
   const addMessage = useCallback((role, text) => {
     if (!mountedRef.current) return
@@ -153,11 +154,13 @@ export default function VoiceQuizScreen({ moduleId, moduleName, flashcard, userI
     intentionalEndRef.current = true
     setShowReconnectDialog(false)
 
-    if (conversationRef.current) {
+    const conv = conversationRef.current
+    conversationRef.current = null
+    if (conv) {
       try {
-        await conversationRef.current.endSession()
-      } catch (err) {
-        console.error('Error ending ElevenLabs session:', err)
+        await conv.endSession()
+      } catch {
+        // WebSocket may already be CLOSING/CLOSED — safe to ignore
       }
     }
 
@@ -192,22 +195,24 @@ export default function VoiceQuizScreen({ moduleId, moduleName, flashcard, userI
       return
     }
 
+    const generation = ++sessionGenerationRef.current
+
     try {
       const tokenResult = await apiClient.post('/api/quiz/speech-token', {
         content: flashcard.content,
         moduleName: moduleName || 'General',
       })
 
-      if (!mountedRef.current) return
+      if (!mountedRef.current || sessionGenerationRef.current !== generation) return
 
       const { signedUrl } = tokenResult
 
       const sessionResult = await quizService.startSession(userId, moduleId, 'voice')
-      if (mountedRef.current && sessionResult?.session?.id) {
+      if (mountedRef.current && sessionGenerationRef.current === generation && sessionResult?.session?.id) {
         sessionIdRef.current = sessionResult.session.id
       }
 
-      if (!mountedRef.current) return
+      if (!mountedRef.current || sessionGenerationRef.current !== generation) return
 
       const { Conversation } = await import('@elevenlabs/client')
 
@@ -223,19 +228,19 @@ export default function VoiceQuizScreen({ moduleId, moduleName, flashcard, userI
           },
         },
         onConnect: () => {
-          if (!mountedRef.current) return
+          if (!mountedRef.current || sessionGenerationRef.current !== generation) return
           wasConnectedRef.current = true
           setStatus('connected')
         },
         onDisconnect: () => {
-          if (!mountedRef.current) return
+          if (!mountedRef.current || sessionGenerationRef.current !== generation) return
           if (wasConnectedRef.current && !intentionalEndRef.current) {
             setShowReconnectDialog(true)
           }
           setStatus('disconnected')
         },
         onMessage: (message) => {
-          if (!mountedRef.current) return
+          if (!mountedRef.current || sessionGenerationRef.current !== generation) return
           if (message.source === 'user') {
             addMessage('user', message.message)
           } else {
@@ -244,12 +249,12 @@ export default function VoiceQuizScreen({ moduleId, moduleName, flashcard, userI
         },
         onError: (err) => {
           console.error('ElevenLabs error:', err)
-          if (!mountedRef.current) return
+          if (!mountedRef.current || sessionGenerationRef.current !== generation) return
           setError('An error occurred with the voice connection. Please try again.')
           setStatus('disconnected')
         },
         onStatusChange: (newStatus) => {
-          if (!mountedRef.current) return
+          if (!mountedRef.current || sessionGenerationRef.current !== generation) return
           if (newStatus === 'connecting') setStatus('connecting')
           else if (newStatus === 'connected') setStatus('connected')
           else if (newStatus === 'disconnected') {
@@ -261,18 +266,13 @@ export default function VoiceQuizScreen({ moduleId, moduleName, flashcard, userI
         },
       })
 
-      if (!mountedRef.current) {
-        try {
-          await conversation.endSession()
-        } catch {
-          // component unmounted during connection
-        }
+      if (!mountedRef.current || sessionGenerationRef.current !== generation) {
         return
       }
 
       conversationRef.current = conversation
     } catch (err) {
-      if (!mountedRef.current) return
+      if (!mountedRef.current || sessionGenerationRef.current !== generation) return
       console.error('Failed to start voice session:', err)
       setError(err.message || 'Failed to connect to the voice agent. Please try again.')
       setStatus('idle')
