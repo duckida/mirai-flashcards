@@ -67,8 +67,11 @@ async function extractFlashcards(imageUrl) {
 
     const { text } = await generateText({
       model: gateway(GATEWAY_CONFIG.model),
-      prompt: EXTRACTION_PROMPT,
       messages: [
+        {
+          role: 'system',
+          content: EXTRACTION_PROMPT,
+        },
         {
           role: 'user',
           content: [
