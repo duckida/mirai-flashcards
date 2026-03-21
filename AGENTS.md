@@ -60,6 +60,8 @@ cd frontend && npm run dev       # Start dev server (port 3001)
 npm run build                    # Build to dist/
 ```
 
+Always use the Vercel CLI for Vercel operations.
+
 ### Architecture Notes
 - **Backend**: ES Modules, Firebase/Firestore, Vercel Blob, OpenAI via AI SDK
 - **Frontend**: ES Modules, React, Vite, Tailwind CSS, shadcn/ui components

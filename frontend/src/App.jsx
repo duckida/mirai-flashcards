@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { CivicAuthProvider, useCivicAuth } from '@civic/auth'
+import { CivicAuthProvider, useUser } from '@civic/auth/react'
 import AuthScreen from './screens/AuthScreen'
 import DashboardScreen from './screens/DashboardScreen'
 import UploadImageScreen from './screens/UploadImageScreen'
@@ -7,7 +7,6 @@ import ModuleDetailScreen from './screens/ModuleDetailScreen'
 import VoiceQuizScreen from './screens/VoiceQuizScreen'
 import ImageQuizScreen from './screens/ImageQuizScreen'
 import SettingsScreen from './screens/SettingsScreen'
-import useAuth from './hooks/useAuth'
 
 const SCREENS = {
   DASHBOARD: 'dashboard',
@@ -19,7 +18,7 @@ const SCREENS = {
 }
 
 function AppContent() {
-  const { isLoading, isAuthenticated } = useAuth()
+  const { user, isLoading } = useUser()
   const [currentScreen, setCurrentScreen] = useState(SCREENS.DASHBOARD)
   const [selectedModuleId, setSelectedModuleId] = useState(null)
 
@@ -42,7 +41,7 @@ function AppContent() {
     )
   }
 
-  if (!isAuthenticated) return <AuthScreen />
+  if (!user) return <AuthScreen />
 
   switch (currentScreen) {
     case SCREENS.UPLOAD_IMAGE:
