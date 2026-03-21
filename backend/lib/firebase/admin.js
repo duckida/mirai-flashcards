@@ -18,6 +18,11 @@ export function initializeAdmin() {
   if (adminApp) {
     return adminApp;
   }
+  
+  if (admin.apps.length > 0) {
+    adminApp = admin.apps[0];
+    return adminApp;
+  }
 
   const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
