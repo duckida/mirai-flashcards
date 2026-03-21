@@ -244,43 +244,43 @@ This document breaks down the AI Flashcard Quizzer specification into concrete, 
 ## Phase 8: Voice Quiz Implementation
 
 ### 8.1 Speech Service Integration (ElevenLabs)
-- [ ] Implement ElevenLabs WebSocket connection
-- [ ] Create speech synthesis wrapper
-- [ ] Create speech recognition/transcription wrapper
-- [ ] Implement connection lifecycle management
-- [ ] Implement reconnection logic
-- [ ] Handle connection interruptions gracefully
+- [x] Implement ElevenLabs WebSocket connection
+- [x] Create speech synthesis wrapper
+- [x] Create speech recognition/transcription wrapper
+- [x] Implement connection lifecycle management
+- [x] Implement reconnection logic
+- [x] Handle connection interruptions gracefully
 
 ### 8.2 Voice Quiz Session Flow
-- [ ] Implement user greeting with name and module topic
-- [ ] Implement question reading aloud
-- [ ] Implement listening for user response
-- [ ] Implement response transcription
-- [ ] Implement session summary speech
-- [ ] Implement error recovery for speech failures
+- [x] Implement user greeting with name and module topic
+- [x] Implement question reading aloud
+- [x] Implement listening for user response
+- [x] Implement response transcription
+- [x] Implement session summary speech
+- [x] Implement error recovery for speech failures
 
 ### 8.3 Voice Quiz UI
-- [ ] Create Voice Quiz Session screen
-- [ ] Implement microphone indicator (listening/speaking)
-- [ ] Implement "Show Answer" toggle
-- [ ] Implement "Next" button
-- [ ] Implement session progress indicator
-- [ ] Implement real-time speech feedback
-- [ ] Add visual indicators for speech activity
+- [x] Create Voice Quiz Session screen
+- [x] Implement microphone indicator (listening/speaking)
+- [x] Implement "Show Answer" toggle
+- [x] Implement "Next" button
+- [x] Implement session progress indicator
+- [x] Implement real-time speech feedback
+- [x] Add visual indicators for speech activity
 
 ### 8.4 Voice Quiz Error Handling
-- [ ] Implement speech connection error handling
-- [ ] Implement transcription error handling
-- [ ] Implement microphone permission handling
-- [ ] Implement graceful fallback to text-based quiz
-- [ ] Implement session resume/end options on error
+- [x] Implement speech connection error handling
+- [x] Implement transcription error handling
+- [x] Implement microphone permission handling
+- [x] Implement graceful fallback to text-based quiz
+- [x] Implement session resume/end options on error
 
 ### 8.5 Speech Latency Optimization
-- [ ] Implement speech connection pooling
-- [ ] Optimize audio codec selection
-- [ ] Implement latency monitoring
-- [ ] Create performance alerts for latency >1 second
-- [ ] Implement caching for common phrases
+- [x] Implement speech connection pooling
+- [x] Optimize audio codec selection
+- [x] Implement latency monitoring
+- [x] Create performance alerts for latency >1 second
+- [x] Implement caching for common phrases
 
 ---
 
@@ -511,7 +511,7 @@ This document breaks down the AI Flashcard Quizzer specification into concrete, 
 - [x] Write tests for Scanner Service
 - [x] Write tests for Classifier Service
 - [ ] Write tests for Quiz Engine (pending - Phase 7 not implemented)
-- [ ] Write tests for Speech Service (pending - Phase 8 not implemented)
+- [x] Write tests for Speech Service (pending - Phase 8 not implemented)
 - [x] Write tests for Image Service
 - [x] Write tests for Canva Service
 - [x] Write tests for API route handlers

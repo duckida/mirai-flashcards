@@ -25,20 +25,29 @@ export class SpeechService {
       );
 
       if (!response.ok) {
-        // Handle both mock objects and real responses
         let errorMessage = 'Unknown error';
         try {
-          const errorData = await response.json();
-          if (errorData && typeof errorData === 'object') {
-            if (errorData.detail) {
-              errorMessage = String(errorData.detail);
-            } else if (errorData.message) {
-              errorMessage = String(errorData.message);
+          // Check if response.json exists and is a function
+          if (typeof response.json === 'function') {
+            const errorData = await response.json();
+            if (errorData && typeof errorData === 'object' && errorData !== null) {
+              if (errorData.detail) {
+                errorMessage = String(errorData.detail);
+              } else if (errorData.message) {
+                errorMessage = String(errorData.message);
+              } else {
+                // Use the whole object if no expected fields found
+                errorMessage = String(Object.prototype.toString.call(errorData) === '[object Object]' 
+                  ? JSON.stringify(errorData) 
+                  : errorData);
+              }
             } else {
-              errorMessage = String(JSON.stringify(errorData));
+              // Handle primitive values or null
+              errorMessage = String(errorData ?? response.statusText ?? 'HTTP Error ' + response.status);
             }
           } else {
-            errorMessage = String(errorData || response.statusText || 'HTTP Error ' + response.status);
+            // If no json function, use status text
+            errorMessage = String(response.statusText || 'HTTP Error ' + response.status);
           }
         } catch (parseError) {
           // If we can't parse JSON, use status text

@@ -3,11 +3,15 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { SpeechService } from './speechService';
 
-// Mock the node-fetch module
-const fetchMock = jest.fn();
-jest.mock('node-fetch', () => fetchMock);
+// Mock node-fetch before importing SpeechService
+const mockFetch = jest.fn();
+jest.unstable_mockModule('node-fetch', () => ({
+  default: mockFetch,
+}));
+
+// Import SpeechService after mocking
+const { SpeechService } = await import('./speechService');
 
 describe('SpeechService', () => {
   const mockAgentId = 'test_agent_id';
@@ -15,7 +19,8 @@ describe('SpeechService', () => {
   const mockSignedUrl = 'wss://test.signed.url';
 
   beforeEach(() => {
-    fetchMock.mockClear();
+    jest.clearAllMocks();
+    mockFetch.mockClear();
     process.env.ELEVENLABS_API_KEY = mockApiKey;
     process.env.ELEVENLABS_AGENT_ID = mockAgentId;
   });
@@ -27,8 +32,7 @@ describe('SpeechService', () => {
 
   describe('getSignedUrl', () => {
     it('should fetch signed URL successfully', async () => {
-      // Mock successful response
-      fetchMock.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ signed_url: mockSignedUrl })
       });
@@ -36,7 +40,7 @@ describe('SpeechService', () => {
       const url = await SpeechService.getSignedUrl(mockAgentId);
       expect(url).toBe(mockSignedUrl);
       
-      expect(fetchMock).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${mockAgentId}`,
         {
           method: 'GET',
@@ -55,8 +59,7 @@ describe('SpeechService', () => {
     });
 
     it('should throw error when API request fails', async () => {
-      // Mock failed response
-      fetchMock.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
@@ -68,8 +71,7 @@ describe('SpeechService', () => {
     });
 
     it('should throw error when network fails', async () => {
-      // Mock network error
-      fetchMock.mockRejectedValueOnce(new Error('Network error'));
+      mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
       await expect(SpeechService.getSignedUrl(mockAgentId))
         .rejects.toThrow('Network error');

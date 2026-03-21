@@ -12,6 +12,7 @@ const useAuth = require('../hooks/useAuth');
 const moduleService = require('../services/moduleService');
 const flashcardService = require('../services/flashcardService');
 const apiClient = require('../services/apiClient');
+const { requestPresentation } = require('../services/canvaService');
 
 function FlashcardCard({ flashcard, onEdit, onDelete, onToggle, isExpanded }) {
   const score = flashcard.knowledgeScore || 0;
@@ -338,6 +339,10 @@ function ModuleDetailScreen({ moduleId, onBack, onNavigate, screens, reviewWeak 
   const [editingCardId, setEditingCardId] = useState(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [showNewForm, setShowNewForm] = useState(false);
+  const [isGeneratingPresentation, setIsGeneratingPresentation] = useState(false);
+  const [presentationResult, setPresentationResult] = useState(null);
+  const [presentationError, setPresentationError] = useState(null);
+  const [showPresentationModal, setShowPresentationModal] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!moduleId) return;
@@ -422,6 +427,23 @@ function ModuleDetailScreen({ moduleId, onBack, onNavigate, screens, reviewWeak 
     },
     [user, moduleId]
   );
+
+  const handleHelpMeUnderstand = useCallback(async () => {
+    if (!module?.name) return;
+    setIsGeneratingPresentation(true);
+    setPresentationError(null);
+    setPresentationResult(null);
+    try {
+      const result = await requestPresentation(module.name);
+      setPresentationResult(result);
+      setShowPresentationModal(true);
+    } catch (err) {
+      setPresentationError(err.message || 'Failed to generate presentation');
+      setShowPresentationModal(true);
+    } finally {
+      setIsGeneratingPresentation(false);
+    }
+  }, [module]);
 
   const aggregateScore =
     flashcards.length > 0

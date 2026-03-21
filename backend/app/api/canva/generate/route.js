@@ -8,18 +8,19 @@
 
 import { getFirestore } from '@/lib/firebase/admin.js';
 import { generatePresentation } from '@/lib/services/canvaService';
+import { getTokens } from '@civic/auth/nextjs';
 
 const db = getFirestore();
 
 export async function POST(request) {
   try {
-    // Get user and Civic Auth token from session
     const userId = request.headers.get('x-user-id');
-    const civicAuthToken = request.headers.get('x-civic-auth-token');
+    const tokens = await getTokens();
+    const civicAuthToken = tokens?.accessToken;
 
     if (!userId || !civicAuthToken) {
       return new Response(
-        JSON.stringify({ error: 'Unauthorized - missing user or auth token' }),
+        JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
       );
     }

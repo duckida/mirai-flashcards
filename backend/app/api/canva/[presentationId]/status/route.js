@@ -7,13 +7,15 @@
 
 import { getFirestore } from '@/lib/firebase/admin.js';
 import { getDesignDetails } from '@/lib/services/canvaService';
+import { getTokens } from '@civic/auth/nextjs';
 
 const db = getFirestore();
 
 export async function GET(request, { params }) {
   try {
     const userId = request.headers.get('x-user-id');
-    const civicAuthToken = request.headers.get('x-civic-auth-token');
+    const tokens = await getTokens();
+    const civicAuthToken = tokens?.accessToken;
 
     if (!userId || !civicAuthToken) {
       return new Response(
