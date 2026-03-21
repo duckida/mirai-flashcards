@@ -5,8 +5,8 @@
  * flashcard within a session window.
  */
 
-import { openai } from '@ai-sdk/openai';
 import { generateImage } from 'ai';
+import { gateway } from 'ai';
 
 /**
  * @typedef {Object} GeneratedImage
@@ -26,7 +26,7 @@ import { generateImage } from 'ai';
  * Configuration for AI image generation via Vercel AI Gateway
  */
 const IMAGE_CONFIG = {
-  model: process.env.IMAGE_GENERATION_MODEL || 'dall-e-3',
+  model: process.env.IMAGE_GENERATION_MODEL || 'google/gemini-2.5-flash-image',
   size: '1024x1024',
   quality: 'standard',
 };
@@ -103,16 +103,7 @@ function clearImageCache() {
  * @returns {import('ai').ImageModel}
  */
 function getImageModel() {
-  const apiKey = process.env.AI_GATEWAY_API_KEY;
-  const baseURL = process.env.AI_GATEWAY_BASE_URL;
-
-  const providerOptions = apiKey ? { apiKey } : {};
-  if (baseURL) {
-    providerOptions.baseURL = baseURL;
-  }
-
-  const provider = openai(providerOptions);
-  return provider.image(IMAGE_CONFIG.model);
+  return gateway.image(IMAGE_CONFIG.model);
 }
 
 /**
@@ -163,7 +154,7 @@ async function generateQuizImage(question, options = {}) {
       prompt,
       size: options.size || IMAGE_CONFIG.size,
       providerOptions: {
-        openai: {
+        google: {
           quality: options.quality || IMAGE_CONFIG.quality,
         },
       },
@@ -241,6 +232,75 @@ function checkConfiguration() {
   };
 }
 
+// ============================================================
+// Neat Flashcard Image Generation (for display)
+// ============================================================
+
+/**
+ * Generates a neat, digitized version of a flashcard for display
+ * Uses Gemini 2.5 Flash Image to create a clean study card
+ * @param {string} content - The raw OCR content from the flashcard
+ * @param {string[]} drawingDescriptions - Descriptions of any drawings
+ * @returns {Promise<{success: boolean, imageUrl?: string, error?: string}>}
+ */
+async function generateNeatCardImage(content, drawingDescriptions = []) {
+  try {
+    const drawingsText = drawingDescriptions.length > 0 
+      ? `\n\nThe card also contains these drawings/diagrams: ${drawingDescriptions.join(', ')}`
+      : '';
+
+    const prompt = `Create a clean, well-designed digital flashcard image.
+
+The card should display the following content in a neat, readable format:
+
+"""
+${content}
+"""
+${drawingsText}
+
+Style requirements:
+- Clean white or light background with subtle shadow
+- Modern, professional typography
+- Well-organized layout with proper spacing
+- If there are drawings mentioned, include simple clean illustrations
+- Make it look like a premium digital study card
+- No borders, just a clean card floating on the background
+- High readability with good contrast`;
+
+    console.log('Generating neat flashcard image...');
+
+    const model = getImageModel();
+
+    const result = await generateImage({
+      model,
+      prompt,
+      size: '1024x1024',
+      providerOptions: {
+        google: {
+          quality: 'standard',
+        },
+      },
+    });
+
+    const imageBase64 = result.image.base64;
+    const dataUrl = `data:${result.image.mimeType};base64,${imageBase64}`;
+
+    console.log('Neat flashcard image generated successfully');
+
+    return {
+      success: true,
+      imageUrl: dataUrl,
+    };
+
+  } catch (error) {
+    console.error('Neat card image generation failed:', error);
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
 export {
   generateQuizImage,
   batchGenerateImages,
@@ -249,6 +309,7 @@ export {
   getCachedImage,
   cacheImage,
   clearImageCache,
+  generateNeatCardImage,
   IMAGE_CONFIG,
 };
 

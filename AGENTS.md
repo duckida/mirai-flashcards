@@ -67,7 +67,7 @@ Always use the Vercel CLI for Vercel operations.
 - **Frontend**: ES Modules, React, Vite, Tailwind CSS, shadcn/ui components
 - **Auth**: Civic.ai OAuth (`/api/auth/[...civicauth]`)
 - **API Routes**: `/api/flashcards`, `/api/modules`, `/api/quiz`, `/api/canva`
-- **Collections**: `users`, `modules`, `flashcards`, `quiz_sessions`, `presentations`
+- **Collections**: `users`, `modules`, `flashcards` (single-sided: `content` field), `quiz_sessions`, `presentations`
 
 ### Frontend Tech Stack
 - **React 19** with Vite for fast builds
@@ -121,7 +121,7 @@ Frontend `VITE_API_URL`: Backend API endpoint (default: http://localhost:3000)
 
 ### Key Backend Services
 - **authService.js** - Civic.ai OAuth & session management
-- **scannerService.js** - AI vision for flashcard extraction from images
+- **scannerService.js** - AI vision for raw content extraction from flashcard images (single-sided: `content` field, no `question`/`answer`)
 - **classifierService.js** - AI classification of flashcards into modules
 - **quizEngineService.js** - Quiz logic, question generation, scoring
 - **speechService.js** - ElevenLabs speech synthesis/recognition

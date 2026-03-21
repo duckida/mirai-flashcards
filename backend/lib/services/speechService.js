@@ -72,21 +72,22 @@ export class SpeechService {
    * @returns {Object} Contextual data for agent
    */
   static buildConversationContext(session, flashcards, user) {
-    const currentQuestionIndex = session.currentQuestionIndex || 0;
-    const currentFlashcard = flashcards[currentQuestionIndex];
+    const currentFlashcardIndex = session.currentFlashcardIndex || 0;
+    const currentFlashcard = flashcards[currentFlashcardIndex];
+    const totalQuestions = session.flashcardIds?.length || flashcards.length;
     
     return {
       user_id: user.id,
       user_name: user.name || 'User',
       session_id: session.id,
       module_name: session.moduleName || 'Unknown Module',
-      current_question_index: currentQuestionIndex,
-      total_questions: session.questionCount || flashcards.length,
-      current_question: currentFlashcard ? currentFlashcard.question : null,
-      correct_answer: currentFlashcard ? currentFlashcard.answer : null,
-      score_correct: session.score?.correct || 0,
-      score_incorrect: session.score?.incorrect || 0,
-      is_complete: session.isComplete || false,
+      current_question_index: currentFlashcardIndex,
+      total_questions: totalQuestions,
+      flashcard_content: currentFlashcard ? currentFlashcard.content : null,
+      drawing_descriptions: currentFlashcard?.drawingDescriptions || [],
+      score_correct: session.totalCorrect || 0,
+      score_incorrect: session.totalIncorrect || 0,
+      is_complete: session.status === 'completed' || false,
       feedback: session.lastFeedback || null,
     };
   }

@@ -159,7 +159,7 @@ export default function ModuleDetailScreen({ moduleId, onBack, onNavigate }) {
                 isExpanded={expandedCardId === card.id}
                 onToggle={(id) => setExpandedCardId(expandedCardId === id ? null : id)}
                 onVoiceQuiz={(card) => onNavigate?.('voice_quiz', moduleId, card, module?.name)}
-                onTextQuiz={(card) => onNavigate?.('text_quiz', moduleId, card)}
+                onTextQuiz={(card) => onNavigate?.('text_quiz', moduleId, card, module?.name)}
               />
             ))
           )}

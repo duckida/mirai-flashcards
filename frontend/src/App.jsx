@@ -6,6 +6,7 @@ import UploadImageScreen from './screens/UploadImageScreen'
 import ModuleDetailScreen from './screens/ModuleDetailScreen'
 import VoiceQuizScreen from './screens/VoiceQuizScreen'
 import ImageQuizScreen from './screens/ImageQuizScreen'
+import MultipleChoiceQuizScreen from './screens/MultipleChoiceQuizScreen'
 import QuizResultsScreen from './screens/QuizResultsScreen'
 import SettingsScreen from './screens/SettingsScreen'
 
@@ -90,7 +91,16 @@ function AppContent() {
     case SCREENS.IMAGE_QUIZ:
       return <ImageQuizScreen moduleId={selectedModuleId} onBack={goBack} onNavigate={navigateTo} />
     case SCREENS.TEXT_QUIZ:
-      return <ImageQuizScreen moduleId={selectedModuleId} flashcard={selectedFlashcard} onBack={goBack} onNavigate={navigateTo} />
+      return (
+        <MultipleChoiceQuizScreen
+          moduleId={selectedModuleId}
+          moduleName={selectedModuleName}
+          flashcard={selectedFlashcard}
+          onBack={goToModule}
+          onComplete={(summary) => navigateTo(SCREENS.QUIZ_RESULTS, selectedModuleId, null, selectedModuleName, summary)}
+          onNavigate={navigateTo}
+        />
+      )
     case SCREENS.QUIZ_RESULTS:
       return (
         <QuizResultsScreen

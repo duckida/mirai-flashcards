@@ -1,8 +1,8 @@
 import { apiClient } from './apiClient'
 
 export const quizService = {
-  async startSession(userId, moduleId, type, cardCount) {
-    return apiClient.post('/api/quiz/start', { userId, moduleId, type, cardCount })
+  async startSession(userId, moduleId, type, cardCount, flashcardId) {
+    return apiClient.post('/api/quiz/start', { userId, moduleId, type, cardCount, flashcardId })
   },
 
   async getNextQuestion(sessionId) {

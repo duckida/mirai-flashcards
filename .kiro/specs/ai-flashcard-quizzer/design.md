@@ -45,7 +45,7 @@ The AI Flashcard Quizzer is a web application that enables users to digitize phy
 **Image Upload & Digitization Flow:**
 1. User uploads image via UI
 2. Image stored in Vercel Storage
-3. Scanner service calls AI vision API to extract Q&A pairs
+3. Scanner service calls AI vision API to extract raw content from the card
 4. Extracted flashcards presented to user for review
 5. User confirms → Classifier assigns to modules
 6. Flashcards persisted to Firestore
@@ -108,8 +108,8 @@ The AI Flashcard Quizzer is a web application that enables users to digitize phy
 
 /**
  * @typedef {Object} ExtractedFlashcard
- * @property {string} question
- * @property {string} answer
+ * @property {string} content - Raw OCR text extracted from the card (single-sided)
+ * @property {string[]} drawingDescriptions - Brief descriptions of any drawings/diagrams
  * @property {number} confidence - 0-1
  * @property {string} sourceImageUrl
  */
@@ -354,8 +354,8 @@ interface PresentationResult {
  * @property {string} id
  * @property {string} userId
  * @property {string} moduleId
- * @property {string} question
- * @property {string} answer
+ * @property {string} content - Raw OCR text from the card (single-sided; no separate question/answer fields)
+ * @property {string[]} drawingDescriptions - Brief descriptions of any drawings/diagrams on the card
  * @property {number} knowledgeScore - 0-100, initialized to 0
  * @property {string} sourceImageUrl
  * @property {Timestamp} createdAt
@@ -465,7 +465,7 @@ Dashboard (Module List)
 - Tailwind CSS with shadcn/ui components: `Card`, `Button`, `Badge`, `Progress`, `Spinner`
 
 #### 3. Module Detail
-- Flashcard list with question/answer toggle
+- Flashcard list with content display
 - Knowledge score display per card
 - Edit/delete buttons per card
 - "Start Voice Quiz" button
@@ -500,11 +500,10 @@ Dashboard (Module List)
 - shadcn/ui components: `Card`, `Button`, `Badge`
 
 #### 7. Flashcard Editor
-- Question input field
-- Answer input field
+- Content text area (single-sided)
 - Validation error display
 - Save/Cancel buttons
-- shadcn/ui components: `Input`, `Textarea`, `Button`
+- shadcn/ui components: `Textarea`, `Button`
 
 #### 8. Upload Image
 - Image picker/drag-and-drop zone
@@ -628,7 +627,7 @@ Dashboard (Module List)
 
 ### Property 2: Flashcard Persistence Round Trip
 
-*For any* extracted flashcard that a user confirms, querying the database should return the same flashcard with identical question, answer, and module assignment.
+*For any* extracted flashcard that a user confirms, querying the database should return the same flashcard with identical content and module assignment.
 
 **Validates: Requirements 2.5, 3.1**
 
@@ -650,15 +649,15 @@ Dashboard (Module List)
 
 **Validates: Requirements 3.4**
 
-### Property 6: Flashcard Display and Toggle
+### Property 6: Flashcard Content Display
 
-*For any* module, all flashcards should be displayed with the question side shown by default, and toggling should alternate between question and answer sides.
+*For any* module, all flashcards should be displayed showing their full content text.
 
 **Validates: Requirements 4.1, 4.2**
 
 ### Property 7: Flashcard Edit Validation and Persistence
 
-*For any* flashcard edit with non-empty question and answer fields, the edit should be persisted to the database; edits with empty fields should be rejected with a validation error.
+*For any* flashcard edit with a non-empty content field, the edit should be persisted to the database; edits with empty content should be rejected with a validation error.
 
 **Validates: Requirements 4.3, 4.4**
 

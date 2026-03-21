@@ -3,8 +3,7 @@
  * Handles AI classification of flashcards into topic modules using Vercel AI Gateway
  */
 
-import { gateway, generateObject } from 'ai';
-import { z } from 'zod';
+import { gateway, generateText } from 'ai';
 
 /**
  * @typedef {Object} ModuleAssignment
@@ -25,19 +24,9 @@ import { z } from 'zod';
  * Configuration for AI classification via Vercel AI Gateway
  */
 const CLASSIFICATION_CONFIG = {
-  model: process.env.CLASSIFICATION_MODEL || 'openai/gpt-4o',
+  model: process.env.CLASSIFICATION_MODEL || 'qwen/qwen3.5-flash',
   maxTokens: 1024,
 };
-
-/**
- * Zod schema for classification response
- */
-const classificationSchema = z.object({
-  moduleName: z.string().describe('The topic or module name that best categorizes this flashcard'),
-  action: z.enum(['existing', 'new']).describe('"existing" if a matching module already exists, "new" if a new module should be created'),
-  confidence: z.number().min(0).max(1).describe('Confidence score between 0 and 1'),
-  reason: z.string().describe('Brief explanation for why this module was chosen'),
-});
 
 /**
  * Builds the classification system prompt
@@ -45,17 +34,20 @@ const classificationSchema = z.object({
  * @returns {string}
  */
 function buildSystemPrompt(existingModuleNames) {
-  let prompt = `You are an expert educational content classifier. Your task is to categorize flashcards into topic modules.
+  let prompt = `You are an expert educational content classifier. Your task is to categorize flashcards into top-level subject modules.
 
-Given a flashcard's question and answer, determine the most appropriate topic module.
+Given a flashcard's content, determine the most appropriate top-level subject module.
 
 Guidelines:
-1. Use concise, clear module names (2-5 words)
-2. Match existing modules when the topic clearly aligns
-3. Create new modules when the topic is genuinely distinct
-4. Be specific enough to group related cards, but broad enough to be useful
-5. For scientific topics, use the specific field (e.g., "Cell Biology", "Organic Chemistry")
-6. For language learning, use the language and skill area (e.g., "Spanish Vocabulary", "French Grammar")`;
+1. Always classify by broad, top-level subject area — NOT by sub-topic or chapter
+2. Use these common top-level categories when applicable: Biology, Chemistry, Physics, Mathematics, Computer Science, English, History, Geography, Economics, Psychology, Philosophy, Art, Music, Literature, Engineering, Medicine, Law, Political Science, Sociology, Statistics, Astronomy, Environmental Science
+3. For language learning, use just the language name (e.g., "Spanish", "French", "Japanese")
+4. Match existing modules when the top-level subject clearly aligns
+5. Only create a new module if no existing module covers the same top-level subject
+6. NEVER use sub-fields or specific topics as module names (e.g., do NOT use "Cell Biology", "Organic Chemistry", "Linear Algebra" — use "Biology", "Chemistry", "Mathematics" instead)
+
+Respond ONLY with valid JSON in this exact format, no other text:
+{"moduleName":"...","action":"existing or new","confidence":0.0-1.0,"reason":"..."}`;
 
   if (existingModuleNames.length > 0) {
     prompt += `\n\nExisting modules in this user's account:\n${existingModuleNames.map(n => `- ${n}`).join('\n')}\n\nIf the flashcard clearly fits one of these existing modules, set action to "existing" and use that module name. If it doesn't fit well, set action to "new" and suggest a new module name.`;
@@ -69,26 +61,47 @@ Guidelines:
 /**
  * Classifies a single flashcard into a module
  * @param {Object} flashcard - The flashcard to classify
- * @param {string} flashcard.question - The question text
- * @param {string} flashcard.answer - The answer text
+ * @param {string} [flashcard.content] - Raw text content (from OCR scan)
+ * @param {string} [flashcard.question] - The question text
+ * @param {string} [flashcard.answer] - The answer text
  * @param {string[]} [existingModuleNames=[]] - Names of existing modules
  * @returns {Promise<ClassificationResult>}
  */
 async function classifyFlashcard(flashcard, existingModuleNames = []) {
   try {
-    console.log('Classifying flashcard:', flashcard.question?.substring(0, 80) + '...');
+    const contentText = flashcard.content || flashcard.question || '';
+    console.log('Classifying flashcard:', contentText.substring(0, 80) + '...');
 
     const systemPrompt = buildSystemPrompt(existingModuleNames);
 
-    const { object } = await generateObject({
-      model: gateway(CLASSIFICATION_CONFIG.model),
-      system: systemPrompt,
-      prompt: `Classify this flashcard into the most appropriate module:
+    const hasQA = flashcard.question && flashcard.answer;
+    const userPrompt = hasQA
+      ? `Classify this flashcard into the most appropriate module:
 
 Question: "${flashcard.question}"
-Answer: "${flashcard.answer}"`,
-      schema: classificationSchema,
+Answer: "${flashcard.answer}"`
+      : `Classify this flashcard content into the most appropriate top-level subject module:
+
+Content: "${contentText}"`;
+
+    const { text } = await generateText({
+      model: gateway(CLASSIFICATION_CONFIG.model),
+      system: systemPrompt,
+      prompt: userPrompt,
     });
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error('No JSON found in classifier response:', text);
+      return { success: false, error: 'Classifier returned invalid response' };
+    }
+
+    const object = JSON.parse(jsonMatch[0]);
+
+    if (!object.moduleName || !object.action) {
+      console.error('Missing fields in classifier response:', object);
+      return { success: false, error: 'Classifier returned incomplete response' };
+    }
 
     console.log(`Classified as: "${object.moduleName}" (${object.action}, confidence: ${object.confidence})`);
 

@@ -14,7 +14,7 @@ import { generateQuizImage } from './imageService.js';
 
 const db = getFirestore();
 
-const AI_MODEL = process.env.CLASSIFICATION_MODEL || 'openai/gpt-4o';
+const AI_MODEL = process.env.CLASSIFICATION_MODEL || 'qwen/qwen3.5-flash';
 
 // ============================================================
 // Exercise type constants
@@ -30,12 +30,21 @@ const EXERCISE_TYPES = ['free_recall', 'multiple_choice', 'fill_in_blank'];
  * Start a new quiz session
  * @param {string} userId
  * @param {string} moduleId
- * @param {'voice' | 'image'} type
+ * @param {'voice' | 'image' | 'multiple_choice'} type
  * @param {number} [cardCount=10]
+ * @param {string} [specificFlashcardId=null]
  * @returns {Promise<Object>} Session data with first question
  */
-export async function startSession(userId, moduleId, type, cardCount = 10) {
-  const flashcards = await selectFlashcards(moduleId, cardCount);
+export async function startSession(userId, moduleId, type, cardCount = 10, specificFlashcardId = null) {
+  let flashcards = [];
+  if (specificFlashcardId) {
+    const doc = await db.collection('flashcards').doc(specificFlashcardId).get();
+    if (doc.exists) {
+      flashcards = [{ id: doc.id, ...doc.data() }];
+    }
+  } else {
+    flashcards = await selectFlashcards(moduleId, cardCount);
+  }
 
   if (flashcards.length === 0) {
     throw new Error('No flashcards found in this module');
@@ -289,7 +298,7 @@ async function adaptQuestionOrder(session) {
 export async function getNextQuestion(sessionId) {
   const session = await getSession(sessionId);
   if (!session) throw new Error('Session not found');
-  if (session.status !== 'active') throw new Error('Session is not complete');
+  if (session.status !== 'active') throw new Error('Session is not active');
 
   // For image sessions, adapt question order based on prior answers
   if (session.type === 'image' && session.currentFlashcardIndex > 0 && session.responses?.length > 0) {
@@ -345,7 +354,12 @@ export async function getNextQuestion(sessionId) {
   }
 
   // Select exercise type based on distribution
-  const exerciseType = selectExerciseType(session.currentFlashcardIndex, session.flashcardIds.length);
+  let exerciseType;
+  if (session.type === 'multiple_choice') {
+    exerciseType = 'multiple_choice';
+  } else {
+    exerciseType = selectExerciseType(session.currentFlashcardIndex, session.flashcardIds.length);
+  }
 
   // Generate question based on type
   let question;
@@ -412,21 +426,86 @@ function selectExerciseType(index, total) {
 }
 
 // ============================================================
+// AI Question Generation from Raw Content
+// ============================================================
+
+const questionSchema = z.object({
+  question: z.string().describe('The quiz question'),
+  answer: z.string().describe('The correct answer based on the content'),
+});
+
+/**
+ * Generate a question from flashcard content using AI
+ * @param {Object} flashcard - Flashcard with content field
+ * @param {'free_recall' | 'multiple_choice' | 'fill_in_blank'} type
+ * @returns {Promise<{question: string, answer: string}>}
+ */
+async function generateQuestionFromContent(flashcard, type) {
+  const content = flashcard.content || '';
+  
+  let typeInstruction = '';
+  if (type === 'free_recall') {
+    typeInstruction = 'Generate a free-recall question that tests understanding of the key concept. The answer should be a concise explanation.';
+  } else if (type === 'multiple_choice') {
+    typeInstruction = 'Generate a multiple-choice style question. The answer should be a short, specific response.';
+  } else if (type === 'fill_in_blank') {
+    typeInstruction = 'Generate a fill-in-the-blank question where the answer is a key term or phrase from the content.';
+  }
+
+  try {
+    const { object } = await generateObject({
+      model: gateway(AI_MODEL),
+      system: `You are a quiz generator. Given raw study material content, generate a quiz question and its correct answer.
+
+Rules:
+1. The question should test understanding of the most important concept in the content
+2. The answer must be directly derived from the content
+3. Keep the question clear and concise
+4. The answer should be specific and factual based on the content
+${flashcard.drawingDescriptions?.length > 0 ? `\nNote: The content includes these drawings/diagrams: ${flashcard.drawingDescriptions.join(', ')}` : ''}`,
+      prompt: `Study material content:
+"""
+${content}
+"""
+
+${typeInstruction}
+
+Generate a question and answer based on this content.`,
+      schema: questionSchema,
+    });
+
+    return {
+      question: object.question,
+      answer: object.answer,
+    };
+  } catch (error) {
+    console.error('AI question generation failed:', error);
+    // Fallback: use content as question prompt
+    return {
+      question: `Based on your notes, explain the following concept:\n\n${content.substring(0, 200)}${content.length > 200 ? '...' : ''}`,
+      answer: content,
+    };
+  }
+}
+
+// ============================================================
 // Free Recall
 // ============================================================
 
 /**
- * Generate a free recall question from a flashcard
+ * Generate a free recall question from a flashcard using AI
  * @param {Object} flashcard
- * @returns {Object}
+ * @returns {Promise<Object>}
  */
-function generateFreeRecallQuestion(flashcard) {
+async function generateFreeRecallQuestion(flashcard) {
+  const { question, answer } = await generateQuestionFromContent(flashcard, 'free_recall');
+  
   return {
     id: `q_${flashcard.id}_${Date.now()}`,
     flashcardId: flashcard.id,
     type: 'free_recall',
-    question: flashcard.question,
-    correctAnswer: flashcard.answer,
+    question,
+    correctAnswer: answer,
     options: null,
     imageUrl: null,
   };
@@ -437,22 +516,22 @@ function generateFreeRecallQuestion(flashcard) {
 // ============================================================
 
 /**
- * Generate a fill-in-the-blank question from a flashcard
+ * Generate a fill-in-the-blank question from a flashcard using AI
  * @param {Object} flashcard
- * @returns {Object}
+ * @returns {Promise<Object>}
  */
-function generateFillInTheBlankQuestion(flashcard) {
-  const answer = flashcard.answer;
-  const questionText = flashcard.question;
-
-  // Create a fill-in-the-blank by replacing key terms in the answer
-  // with blanks in the question context
+async function generateFillInTheBlankQuestion(flashcard) {
+  const { question, answer } = await generateQuestionFromContent(flashcard, 'fill_in_blank');
+  
+  // Create a blanked version of the answer
+  const blankedAnswer = createBlankedAnswer(answer);
+  
   return {
     id: `q_${flashcard.id}_${Date.now()}`,
     flashcardId: flashcard.id,
     type: 'fill_in_blank',
-    question: `${questionText}\n\nFill in the blank: ${createBlankedAnswer(answer)}`,
-    correctAnswer: extractBlankedWord(answer),
+    question: `${question}\n\nFill in the blank: ${blankedAnswer}`,
+    correctAnswer: answer,
     options: null,
     imageUrl: null,
   };
@@ -470,14 +549,12 @@ function createBlankedAnswer(answer) {
     return '____';
   }
 
-  // Pick a significant word (skip short words and common words)
   const skipWords = new Set(['a', 'an', 'the', 'is', 'are', 'was', 'were', 'of', 'in', 'to', 'for', 'and', 'or', 'but', 'with', 'on', 'at', 'by']);
   const significantIndices = words
     .map((w, i) => ({ word: w.toLowerCase().replace(/[^a-z]/g, ''), index: i }))
     .filter(w => w.word.length > 2 && !skipWords.has(w.word));
 
   if (significantIndices.length === 0) {
-    // Just blank the longest word
     let longestIdx = 0;
     let longestLen = 0;
     words.forEach((w, i) => {
@@ -491,22 +568,10 @@ function createBlankedAnswer(answer) {
     return result.join(' ');
   }
 
-  // Pick a random significant word
   const pick = significantIndices[Math.floor(Math.random() * significantIndices.length)];
   const result = [...words];
   result[pick.index] = '____';
   return result.join(' ');
-}
-
-/**
- * Extract the word that was blanked
- * @param {string} answer
- * @returns {string}
- */
-function extractBlankedWord(answer) {
-  // For simple implementation, return the whole answer as acceptable
-  // In a more sophisticated version, this would track which word was blanked
-  return answer;
 }
 
 // ============================================================
@@ -520,37 +585,65 @@ const multipleChoiceSchema = z.object({
 });
 
 /**
- * Generate a multiple choice question from a flashcard
+ * Generate a multiple choice question from a flashcard using AI
  * @param {Object} flashcard - The flashcard being quizzed
  * @param {Array} moduleFlashcards - All flashcards in the module (for distractors)
  * @returns {Promise<Object>}
  */
 async function generateMultipleChoiceQuestion(flashcard, moduleFlashcards) {
-  const correctAnswer = flashcard.answer;
+  const content = flashcard.content || '';
+  const otherContents = moduleFlashcards
+    .filter(fc => fc.id !== flashcard.id)
+    .map(fc => fc.content?.substring(0, 100))
+    .filter(Boolean)
+    .join('\n');
 
-  // Get distractor source flashcards (other flashcards in module)
-  const otherFlashcards = moduleFlashcards.filter(fc => fc.id !== flashcard.id);
+  try {
+    const { object } = await generateObject({
+      model: gateway(AI_MODEL),
+      system: `You are creating a multiple-choice quiz question from study material content.
 
-  let options;
+Rules:
+1. Generate a question that tests understanding of the key concept
+2. The correct answer must be directly derived from the content
+3. Generate 3 plausible but incorrect distractor answers
+4. Distractors should be related to the topic but clearly wrong
+5. Make all 4 options roughly the same length and format
+${flashcard.drawingDescriptions?.length > 0 ? `\nNote: The content includes these drawings/diagrams: ${flashcard.drawingDescriptions.join(', ')}` : ''}
 
-  if (otherFlashcards.length >= 3) {
-    // Use answers from other flashcards as distractors
-    const distractors = selectDistractors(otherFlashcards, 3);
-    options = shuffleArrayWithResult([correctAnswer, ...distractors]);
-  } else {
-    // Generate AI-based distractors for small modules
-    options = await generateAIDistractors(flashcard, moduleFlashcards);
+${otherContents ? `Other topics in this module (for context, do NOT base your question on these):
+${otherContents}` : ''}`,
+      prompt: `Study material content:
+"""
+${content}
+"""
+
+Generate a multiple-choice question with 4 answer options (1 correct, 3 incorrect distractors).`,
+      schema: multipleChoiceSchema,
+    });
+
+    return {
+      id: `q_${flashcard.id}_${Date.now()}`,
+      flashcardId: flashcard.id,
+      type: 'multiple_choice',
+      question: object.question,
+      correctAnswer: object.correctAnswer,
+      options: shuffleArrayWithResult(object.options),
+      imageUrl: null,
+    };
+  } catch (error) {
+    console.error('AI multiple choice generation failed:', error);
+    // Fallback
+    return {
+      id: `q_${flashcard.id}_${Date.now()}`,
+      flashcardId: flashcard.id,
+      type: 'multiple_choice',
+      question: `Based on your notes, describe the following:\n\n${content.substring(0, 150)}${content.length > 150 ? '...' : ''}`,
+      correctAnswer: content,
+      options: shuffleArrayWithResult([content, 'Not covered in notes', 'Cannot be determined', 'None of the above']),
+      imageUrl: null,
+    };
   }
-
-  return {
-    id: `q_${flashcard.id}_${Date.now()}`,
-    flashcardId: flashcard.id,
-    type: 'multiple_choice',
-    question: flashcard.question,
-    correctAnswer,
-    options,
-    imageUrl: null,
-  };
 }
 
 /**
@@ -561,63 +654,7 @@ async function generateMultipleChoiceQuestion(flashcard, moduleFlashcards) {
  */
 function selectDistractors(flashcards, count) {
   const shuffled = [...flashcards].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, count).map(fc => fc.answer);
-}
-
-/**
- * Generate AI-based distractors when module has fewer than 4 flashcards
- * @param {Object} flashcard
- * @param {Array} moduleFlashcards
- * @returns {Promise<string[]>}
- */
-async function generateAIDistractors(flashcard, moduleFlashcards) {
-  try {
-    const contextAnswers = moduleFlashcards
-      .filter(fc => fc.id !== flashcard.id)
-      .map(fc => fc.answer)
-      .join(', ');
-
-    const { object } = await generateObject({
-      model: gateway(AI_MODEL),
-      system: `You are creating a multiple-choice quiz question. Generate 3 plausible but incorrect answer options for the given question and correct answer. The distractors should be related to the topic but clearly incorrect.
-
-${contextAnswers ? `Other answers in this topic (for context, do NOT reuse these): ${contextAnswers}` : ''}
-
-Rules:
-1. Each distractor must be plausible but wrong
-2. Distractors should be roughly the same length as the correct answer
-3. Do not include the correct answer in distractors
-4. Make distractors distinct from each other`,
-      prompt: `Question: "${flashcard.question}"
-Correct Answer: "${flashcard.answer}"
-
-Generate 3 plausible but incorrect answer options.`,
-      schema: z.object({
-        distractors: z.array(z.string()).length(3).describe('3 incorrect answer options'),
-      }),
-    });
-
-    const options = shuffleArrayWithResult([flashcard.answer, ...object.distractors]);
-    return options;
-  } catch (error) {
-    console.error('AI distractor generation failed:', error);
-    // Fallback: generate simple variations
-    return generateFallbackDistractors(flashcard.answer);
-  }
-}
-
-/**
- * Generate fallback distractors when AI fails
- * @param {string} correctAnswer
- * @returns {string[]}
- */
-function generateFallbackDistractors(correctAnswer) {
-  const distractors = [
-    `Not ${correctAnswer}`,
-    `Opposite of ${correctAnswer}`,
-    `None of the above`,
-  ];
-  return shuffleArrayWithResult([correctAnswer, ...distractors]);
+  return shuffled.slice(0, count).map(fc => fc.content?.substring(0, 50) || 'Unknown');
 }
 
 /**
@@ -637,6 +674,67 @@ function shuffleArrayWithResult(array) {
 // ============================================================
 // Response Evaluation
 // ============================================================
+
+const evaluationSchema = z.object({
+  isCorrect: z.boolean().describe('Whether the user answer is correct'),
+  confidence: z.number().min(0).max(1).describe('Confidence in the evaluation'),
+  keyPoints: z.array(z.string()).describe('Key points from the correct answer'),
+  missingPoints: z.array(z.string()).describe('Important points the user missed'),
+});
+
+/**
+ * Evaluate a user's response using AI
+ * @param {string} content - The original flashcard content
+ * @param {string} userAnswer - The user's answer
+ * @param {string} question - The question that was asked
+ * @returns {Promise<{isCorrect: boolean, confidence: number, keyPoints: string[], missingPoints: string[]}>}
+ */
+async function evaluateWithAI(content, userAnswer, question) {
+  try {
+    const { object } = await generateObject({
+      model: gateway(AI_MODEL),
+      system: `You are an expert quiz evaluator. Evaluate the user's answer against the original study material.
+
+Rules:
+1. Determine if the user's answer demonstrates understanding of the key concepts
+2. Be somewhat lenient - partial understanding should be marked correct
+3. Focus on whether the core concept is captured, not exact wording
+4. Consider synonyms and paraphrasing as correct
+5. If the answer is clearly wrong or unrelated, mark as incorrect`,
+      prompt: `Original study material:
+"""
+${content}
+"""
+
+Question asked: "${question}"
+
+User's answer: "${userAnswer}"
+
+Evaluate whether the user's answer is correct based on the study material.`,
+      schema: evaluationSchema,
+    });
+
+    return {
+      isCorrect: object.isCorrect,
+      confidence: object.confidence,
+      keyPoints: object.keyPoints,
+      missingPoints: object.missingPoints,
+    };
+  } catch (error) {
+    console.error('AI evaluation failed, using fallback:', error);
+    // Fallback: simple keyword matching
+    const contentWords = new Set(content.toLowerCase().split(/\s+/));
+    const answerWords = new Set(userAnswer.toLowerCase().split(/\s+/));
+    const overlap = [...answerWords].filter(w => contentWords.has(w) && w.length > 3);
+    const isCorrect = overlap.length >= 2;
+    return {
+      isCorrect,
+      confidence: isCorrect ? 0.6 : 0.8,
+      keyPoints: [],
+      missingPoints: [],
+    };
+  }
+}
 
 /**
  * Evaluate a user's response to a quiz question
@@ -660,8 +758,15 @@ export async function evaluateResponse(sessionId, questionId, userAnswer) {
 
   const flashcard = { id: flashcardDoc.id, ...flashcardDoc.data() };
 
-  // Determine correctness
-  const { isCorrect, confidence } = determineCorrectness(flashcard.answer, userAnswer);
+  // Get the original question from session responses if available, or use content
+  const originalQuestion = session.lastQuestion || 'General understanding';
+  
+  // Use AI to evaluate the answer against the content
+  const { isCorrect, confidence } = await evaluateWithAI(
+    flashcard.content || '',
+    userAnswer,
+    originalQuestion
+  );
 
   // Update score via scoring service
   const scoreResult = await updateFlashcardScore(flashcardId, isCorrect, confidence);
@@ -672,7 +777,7 @@ export async function evaluateResponse(sessionId, questionId, userAnswer) {
     questionId,
     questionType: inferQuestionType(questionId),
     userAnswer,
-    correctAnswer: flashcard.answer,
+    correctAnswer: flashcard.content?.substring(0, 200) || '',
     isCorrect,
     scoreChange: scoreResult.scoreDelta,
     confidence,
@@ -700,8 +805,8 @@ export async function evaluateResponse(sessionId, questionId, userAnswer) {
     isCorrect,
     scoreChange: scoreResult.scoreDelta,
     newScore: scoreResult.newScore,
-    feedback: generateFeedback(isCorrect, flashcard.answer, userAnswer, confidence),
-    correctAnswer: flashcard.answer,
+    feedback: generateFeedback(isCorrect, flashcard.content?.substring(0, 200) || '', userAnswer, confidence),
+    correctAnswer: flashcard.content?.substring(0, 200) || '',
   };
 }
 

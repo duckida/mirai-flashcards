@@ -62,15 +62,15 @@ This is a full-stack JavaScript application with a Next.js backend and React fro
 - Automatic CDN distribution
 - Token-based access
 
-**Speech**: ElevenLabs Real-Time API
+**Speech**: ElevenLabs Agent API
 - WebSocket-based speech synthesis
 - Speech recognition/transcription
 - Multiple voice options
 
-**AI Services**: OpenAI APIs
-- GPT-4 Vision for image analysis
-- DALL-E 3 for image generation
-- GPT-4 for text classification
+**AI Services**: Vercel AI APIs
+- Qwen3.5 Flash for image analysis
+- Gemini 2.5 Flash for image generation
+- Qwen3.5 Flash for text classification
 
 **Presentations**: Canva MCP (via Civic.ai)
 - Model Context Protocol integration

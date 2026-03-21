@@ -44,12 +44,17 @@ export const POST = apiHandler(async (request) => {
     });
   }
 
+  // Add source image URL to each flashcard
+  const flashcards = (scanResult.flashcards || []).map((flashcard) => ({
+    ...flashcard,
+    sourceImageUrl: uploadResult.url,
+  }));
+
   return successResponse({
     upload: { url: uploadResult.url, fileName: uploadResult.fileName },
     scan: {
-      flashcards: scanResult.flashcards,
-      stats: scanResult.stats,
+      flashcards,
       validation: scanResult.validation,
     },
-  }, `Successfully uploaded and scanned image. Extracted ${scanResult.flashcards?.length || 0} flashcards.`);
+  }, `Successfully uploaded and scanned image. Extracted ${flashcards.length} flashcards.`);
 });

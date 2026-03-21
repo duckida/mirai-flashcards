@@ -9,6 +9,7 @@ import { canvaService } from '@/services/canvaService'
 function ScoreChangeItem({ flashcardId, result, flashcards }) {
   const flashcard = flashcards?.find((fc) => fc.id === flashcardId)
   const isPositive = result.scoreChange > 0
+  const cardPreview = flashcard?.content?.substring(0, 80) || `Card ${flashcardId?.substring(0, 8)}...`
 
   return (
     <Card className="mb-2">
@@ -17,7 +18,7 @@ function ScoreChangeItem({ flashcardId, result, flashcards }) {
           <div className="flex items-center gap-2 flex-1">
             <span className="text-lg">{result.isCorrect ? '✅' : '❌'}</span>
             <span className="text-text-primary text-sm truncate flex-1">
-              {flashcard?.question || `Card ${flashcardId?.substring(0, 8)}...`}
+              {cardPreview}
             </span>
           </div>
           <Badge variant={result.isCorrect ? 'success' : 'error'}>

@@ -7,8 +7,8 @@ import { getNextQuestion } from '@/lib/services/quizEngineService.js';
 import { apiHandler } from '@/lib/api/middleware.js';
 import { errorResponse, successResponse } from '@/lib/api/errorHandler.js';
 
-export const GET = apiHandler(async (request, { params }) => {
-  const { sessionId } = params;
+export const GET = apiHandler(async (request, { params: awaitedParams }) => {
+  const { sessionId } = awaitedParams;
 
   if (!sessionId) {
     return errorResponse('Session ID is required', 400);

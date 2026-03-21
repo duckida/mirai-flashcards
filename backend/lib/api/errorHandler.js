@@ -51,6 +51,14 @@ export function handleApiError(error, context = 'API') {
     return errorResponse(error.message, 404);
   }
 
+  if (error.message?.includes('not active') || error.message?.includes('is not active')) {
+    return errorResponse(error.message, 400);
+  }
+
+  if (error.message?.includes('No flashcards found')) {
+    return errorResponse(error.message, 400);
+  }
+
   if (error.message?.includes('rate limit')) {
     return errorResponse('Rate limit exceeded. Please try again later.', 429);
   }

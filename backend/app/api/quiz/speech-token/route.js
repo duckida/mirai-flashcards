@@ -1,11 +1,14 @@
 /**
- * GET /api/quiz/speech-token
- * Get a signed ElevenLabs conversation URL for voice quizzes
+ * POST /api/quiz/speech-token
+ * Get a signed ElevenLabs conversation URL for voice quizzes with flashcard context
  */
 import { apiHandler } from '@/lib/api/middleware.js';
 import { errorResponse, successResponse } from '@/lib/api/errorHandler.js';
 
-export const GET = apiHandler(async () => {
+export const POST = apiHandler(async (request) => {
+  const body = await request.json();
+  const { content, moduleName } = body;
+
   const apiKey = process.env.ELEVENLABS_API_KEY;
   const agentId = process.env.ELEVENLABS_AGENT_ID;
 
@@ -31,5 +34,8 @@ export const GET = apiHandler(async () => {
 
   const data = await response.json();
 
-  return successResponse({ signedUrl: data.signed_url });
+  return successResponse({ 
+    signedUrl: data.signed_url,
+    context: content ? `Quiz me on this: ${content}` : `Quiz topic: ${moduleName || 'General'}`
+  });
 });

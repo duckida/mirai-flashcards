@@ -13,7 +13,7 @@ import { errorResponse, successResponse } from '@/lib/api/errorHandler.js';
  * POST handler for saving flashcards
  * Expects JSON with:
  * - userId: The user ID
- * - flashcards: Array of { question, answer, sourceImageUrl, confidence }
+ * - flashcards: Array of { content, drawingDescriptions, sourceImageUrl, confidence }
  * - moduleId: Optional - if provided, all flashcards go to this module
  */
 export const POST = apiHandler(async (request) => {
@@ -28,14 +28,11 @@ export const POST = apiHandler(async (request) => {
     return errorResponse('At least one flashcard is required', 400);
   }
 
-  // Validate each flashcard has question and answer
+  // Validate each flashcard has content
   for (let i = 0; i < flashcards.length; i++) {
     const card = flashcards[i];
-    if (!card.question || !card.question.trim()) {
-      return errorResponse(`Flashcard ${i + 1}: Question is required`, 400);
-    }
-    if (!card.answer || !card.answer.trim()) {
-      return errorResponse(`Flashcard ${i + 1}: Answer is required`, 400);
+    if (!card.content || !card.content.trim()) {
+      return errorResponse(`Flashcard ${i + 1}: Content is required`, 400);
     }
   }
 
@@ -54,8 +51,8 @@ export const POST = apiHandler(async (request) => {
       const flashcardData = {
         userId,
         moduleId,
-        question: card.question.trim(),
-        answer: card.answer.trim(),
+        content: card.content.trim(),
+        drawingDescriptions: card.drawingDescriptions || [],
         sourceImageUrl: card.sourceImageUrl || '',
         confidence: card.confidence || 0,
         knowledgeScore: 0,
@@ -99,34 +96,19 @@ export const POST = apiHandler(async (request) => {
       let targetModuleId;
       let targetModuleName;
 
-      if (existingModules.length > 0) {
-        const match = await findMatchingModule(
-          { question: card.question, answer: card.answer },
-          existingModules.map((m) => ({ id: m.id, name: m.name }))
-        );
+      // Classify flashcard into a top-level subject module
+      const match = await findMatchingModule(
+        { content: card.content },
+        existingModules.map((m) => ({ id: m.id, name: m.name }))
+      );
 
-        if (!match.shouldCreateNew && match.moduleId) {
-          targetModuleId = match.moduleId;
-          targetModuleName = match.moduleName;
-        } else {
-          const newModuleRef = await db.collection('modules').add({
-            userId,
-            name: match.moduleName,
-            description: 'Auto-created from uploaded flashcards',
-            flashcardCount: 0,
-            aggregateKnowledgeScore: 0,
-            color: getRandomModuleColor(),
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          });
-          targetModuleId = newModuleRef.id;
-          targetModuleName = match.moduleName;
-          existingModules.push({ id: targetModuleId, name: targetModuleName });
-        }
+      if (!match.shouldCreateNew && match.moduleId) {
+        targetModuleId = match.moduleId;
+        targetModuleName = match.moduleName;
       } else {
         const newModuleRef = await db.collection('modules').add({
           userId,
-          name: 'My Flashcards',
+          name: match.moduleName,
           description: 'Auto-created from uploaded flashcards',
           flashcardCount: 0,
           aggregateKnowledgeScore: 0,
@@ -135,16 +117,17 @@ export const POST = apiHandler(async (request) => {
           updatedAt: new Date(),
         });
         targetModuleId = newModuleRef.id;
-        targetModuleName = 'My Flashcards';
+        targetModuleName = match.moduleName;
         existingModules.push({ id: targetModuleId, name: targetModuleName });
       }
 
       const flashcardData = {
         userId,
         moduleId: targetModuleId,
-        question: card.question.trim(),
-        answer: card.answer.trim(),
+        content: card.content.trim(),
+        drawingDescriptions: card.drawingDescriptions || [],
         sourceImageUrl: card.sourceImageUrl || '',
+        displayImageUrl: card.displayImageUrl || '',
         confidence: card.confidence || 0,
         knowledgeScore: 0,
         reviewCount: 0,

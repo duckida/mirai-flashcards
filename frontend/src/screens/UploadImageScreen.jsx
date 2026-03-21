@@ -22,14 +22,15 @@ function FlashcardPreview({ flashcard, index }) {
           </div>
           <Badge variant={variant}>{confidence}% confidence</Badge>
         </div>
-        <div className="p-3 bg-bg-muted rounded-xl mb-2">
-          <div className="text-xs text-primary font-semibold uppercase tracking-wide mb-1">Q</div>
-          <div className="text-text-primary">{flashcard.question}</div>
-        </div>
-        <div className="p-3 bg-primary-lighter rounded-xl">
-          <div className="text-xs text-primary font-semibold uppercase tracking-wide mb-1">A</div>
-          <div className="text-text-primary">{flashcard.answer}</div>
-        </div>
+        {flashcard.sourceImageUrl && (
+          <div className="rounded-xl overflow-hidden bg-bg-muted">
+            <img 
+              src={flashcard.sourceImageUrl} 
+              alt={`Flashcard ${index + 1}`} 
+              className="w-full max-w-md mx-auto"
+            />
+          </div>
+        )}
       </CardContent>
     </Card>
   )
@@ -98,7 +99,10 @@ export default function UploadImageScreen({ onBack, onSuccess }) {
     setState(STATES.SAVING)
     try {
       const result = await flashcardService.saveFlashcards(user.id, flashcards.map((c) => ({
-        question: c.question, answer: c.answer, sourceImageUrl: c.sourceImageUrl || '', confidence: c.confidence || 0,
+        content: c.content,
+        drawingDescriptions: c.drawingDescriptions || [],
+        sourceImageUrl: c.sourceImageUrl || '',
+        confidence: c.confidence || 0,
       })))
       if (!result.success) throw new Error(result.error || 'Failed to save flashcards')
       const moduleInfo = result.moduleAssignments?.map((m) => `${m.moduleName} (${m.flashcardCount} cards)`).join(', ')
