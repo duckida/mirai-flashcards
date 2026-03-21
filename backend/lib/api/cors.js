@@ -3,7 +3,7 @@
  * Handles preflight OPTIONS requests and adds CORS headers to responses.
  */
 
-const ALLOWED_ORIGIN = process.env.FRONTEND_URL || 'http://localhost:3001';
+const ALLOWED_ORIGIN = (process.env.FRONTEND_URL || 'http://localhost:3001').trim().replace(/\/+$/, '');
 const ALLOWED_METHODS = 'GET, POST, PATCH, DELETE, OPTIONS';
 const ALLOWED_HEADERS = 'Content-Type, Authorization, x-user-id';
 

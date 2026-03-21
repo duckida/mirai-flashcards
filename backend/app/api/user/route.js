@@ -7,6 +7,7 @@ import { getUser, updateUserPreferences, upsertUser } from '@/lib/services/authS
 import { getUser as getCivicUser } from '@civic/auth/nextjs';
 import { apiHandler } from '@/lib/api/middleware.js';
 import { errorResponse, successResponse } from '@/lib/api/errorHandler.js';
+import { preflightResponse } from '@/lib/api/cors.js';
 
 /**
  * GET handler - Retrieve current user profile
@@ -65,3 +66,5 @@ export const PATCH = apiHandler(async (request) => {
 
   return successResponse({ user: updatedUser });
 });
+
+export const OPTIONS = apiHandler(async () => new Response(null, { status: 204 }));
