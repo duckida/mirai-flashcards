@@ -12,8 +12,27 @@ class ApiClient {
       },
     }
 
-    const response = await fetch(url, config)
-    const data = await response.json()
+    let response
+    try {
+      response = await fetch(url, config)
+    } catch (err) {
+      if (err.message.includes('Failed to fetch') || err.name === 'TypeError') {
+        throw new Error(`Cannot connect to server at ${BASE_URL}. Is the backend running?`)
+      }
+      throw new Error(`Network error: ${err.message}`)
+    }
+
+    let data
+    const contentType = response.headers.get('content-type')
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json()
+    } else {
+      const text = await response.text()
+      if (!response.ok) {
+        throw new Error(`Server error (${response.status}): ${text.substring(0, 200)}`)
+      }
+      throw new Error(`Unexpected response from server (${response.status})`)
+    }
 
     if (!response.ok) {
       throw new Error(data.error || `Request failed with status ${response.status}`)

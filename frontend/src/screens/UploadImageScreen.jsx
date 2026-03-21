@@ -64,7 +64,15 @@ export default function UploadImageScreen({ onBack, onSuccess }) {
   }, [])
 
   const handleUploadAndScan = useCallback(async () => {
-    if (!selectedFile || !user?.id) return
+    if (!selectedFile) {
+      setError('Please select an image first.')
+      return
+    }
+    if (!user?.id) {
+      setError('User not authenticated. Please sign in again.')
+      setState(STATES.ERROR)
+      return
+    }
     setError(null)
     setState(STATES.UPLOADING)
     setUploadProgress(0)

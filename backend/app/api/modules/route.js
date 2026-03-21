@@ -22,19 +22,31 @@ export const GET = apiHandler(async (request) => {
     return errorResponse('User ID is required', 400);
   }
 
-  const db = getFirestore();
-  const snapshot = await db
-    .collection('modules')
-    .where('userId', '==', userId)
-    .orderBy('createdAt', 'desc')
-    .get();
+  try {
+    const db = getFirestore();
+    const snapshot = await db
+      .collection('modules')
+      .where('userId', '==', userId)
+      .orderBy('createdAt', 'desc')
+      .get();
 
-  const modules = snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  }));
+    const modules = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
 
-  return successResponse({ modules });
+    return successResponse({ modules });
+  } catch (err) {
+    console.error('Error fetching modules:', err);
+    if (err.message && err.message.includes('requires an index')) {
+      console.error('Missing index error details:', err.message);
+      return errorResponse(
+        `Database index not found: ${err.message}`,
+        500
+      );
+    }
+    return errorResponse(err.message || 'Failed to fetch modules', 500);
+  }
 });
 
 /**

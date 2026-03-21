@@ -53,7 +53,11 @@ export default function DashboardScreen({ onNavigate }) {
   const [error, setError] = useState(null)
 
   const fetchModules = useCallback(async () => {
-    if (!user?.id) return
+    if (!user?.id) {
+      setError('User not authenticated. Please sign in again.')
+      setIsLoading(false)
+      return
+    }
     setIsLoading(true)
     setError(null)
     try {
