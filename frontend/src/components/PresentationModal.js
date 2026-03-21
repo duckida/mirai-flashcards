@@ -8,7 +8,7 @@
 
 const React = require('react');
 const { useState, useCallback } = React;
-const { YStack, XStack, Text, Button, Card } = require('@tamagui/core');
+const { YStack, XStack, Text, Button, Card } = require('tamagui');
 
 function PresentationModal({
   isVisible,

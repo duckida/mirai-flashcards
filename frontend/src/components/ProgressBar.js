@@ -6,7 +6,7 @@
  */
 
 const React = require('react');
-const { YStack, XStack, Text } = require('@tamagui/core');
+const { YStack, XStack, Text } = require('tamagui');
 
 function ProgressBar({ current, total, height = 6, showLabel = false, color }) {
   const percentage = total > 0 ? Math.round((current / total) * 100) : 0;

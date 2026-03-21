@@ -7,7 +7,7 @@
 
 const React = require('react');
 const { useState, useEffect, useCallback } = React;
-const { YStack, XStack, Text, Button, Card, Spinner, ScrollView } = require('@tamagui/core');
+const { YStack, XStack, Text, Button, Card, Spinner, ScrollView } = require('tamagui');
 const useAuth = require('../hooks/useAuth');
 const moduleService = require('../services/moduleService');
 

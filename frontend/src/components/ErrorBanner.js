@@ -6,7 +6,7 @@
  */
 
 const React = require('react');
-const { YStack, XStack, Text, Button, Card } = require('@tamagui/core');
+const { YStack, XStack, Text, Button, Card } = require('tamagui');
 
 function ErrorBanner({ message, onDismiss, onRetry, style }) {
   if (!message) return null;

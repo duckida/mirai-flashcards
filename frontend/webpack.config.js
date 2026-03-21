@@ -1,8 +1,18 @@
 const path = require('path')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
+const webpack = require('webpack')
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production'
+
+  // Define environment variables to replace
+  const defineEnv = {}
+  // Replace all REACT_APP_* environment variables
+  Object.keys(process.env)
+    .filter(key => key.startsWith('REACT_APP_'))
+    .forEach(key => {
+      defineEnv[`process.env.${key}`] = JSON.stringify(process.env[key])
+    })
 
   return {
     mode: isProduction ? 'production' : 'development',
@@ -39,6 +49,12 @@ module.exports = (env, argv) => {
           collapseWhitespace: true,
           removeRedundantAttributes: true,
         } : false,
+      }),
+      new webpack.ProvidePlugin({
+        process: 'process/browser.js',
+      }),
+      new webpack.DefinePlugin({
+        ...defineEnv,
       }),
     ],
     devServer: {

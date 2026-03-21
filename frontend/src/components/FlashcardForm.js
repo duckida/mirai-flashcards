@@ -8,7 +8,7 @@
 
 const React = require('react');
 const { useState, useCallback, useEffect } = React;
-const { YStack, XStack, Text, Button, Input, Card } = require('@tamagui/core');
+const { YStack, XStack, Text, Button, Input, Card } = require('tamagui');
 
 function FlashcardForm({
   mode = 'create', // 'create' | 'edit'

@@ -21,8 +21,5 @@
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
     }
-  ],
-  "env": {
-    "REACT_APP_API_URL": "@react_app_api_url"
-  }
+  ]
 }

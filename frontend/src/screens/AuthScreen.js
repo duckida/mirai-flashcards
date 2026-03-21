@@ -6,7 +6,7 @@
  */
 
 const React = require('react');
-const { YStack, XStack, Text, Button, Spinner, Card } = require('@tamagui/core');
+const { YStack, XStack, Text, Button, Spinner, Card } = require('tamagui');
 const useAuth = require('../hooks/useAuth');
 
 function AuthScreen() {

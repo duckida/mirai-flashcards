@@ -1,6 +1,6 @@
 const React = require('react')
 const { useState, useCallback } = React
-const { TamaguiProvider, YStack, Spinner, Text } = require('@tamagui/core')
+const { TamaguiProvider, YStack, Spinner, Text } = require('tamagui')
 const tamaguiConfig = require('../tamagui.config').default
 const AuthScreen = require('./screens/AuthScreen')
 const DashboardScreen = require('./screens/DashboardScreen')

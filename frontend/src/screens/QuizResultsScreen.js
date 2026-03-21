@@ -8,7 +8,7 @@
 
 const React = require('react');
 const { useState, useCallback } = React;
-const { YStack, XStack, Text, Button, Card, ScrollView } = require('@tamagui/core');
+const { YStack, XStack, Text, Button, Card, ScrollView } = require('tamagui');
 const { requestPresentation } = require('../services/canvaService');
 const PresentationModal = require('../components/PresentationModal');
 

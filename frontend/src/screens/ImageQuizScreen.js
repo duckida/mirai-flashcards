@@ -8,7 +8,7 @@
 
 const React = require('react');
 const { useState, useEffect, useCallback } = React;
-const { YStack, XStack, Text, Button, Card, Spinner, ScrollView, Input } = require('@tamagui/core');
+const { YStack, XStack, Text, Button, Card, Spinner, ScrollView, Input } = require('tamagui');
 const useAuth = require('../hooks/useAuth');
 const useQuiz = require('../hooks/useQuiz');
 const QuizResultsScreen = require('./QuizResultsScreen');

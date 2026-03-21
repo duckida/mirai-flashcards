@@ -7,7 +7,7 @@
 
 const React = require('react');
 const { useState, useCallback } = React;
-const { YStack, XStack, Text, Button, Card, ScrollView, Slider } = require('@tamagui/core');
+const { YStack, XStack, Text, Button, Card, ScrollView, Slider } = require('tamagui');
 const useAuth = require('../hooks/useAuth');
 
 function SettingsScreen({ onBack }) {

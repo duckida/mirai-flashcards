@@ -6,7 +6,7 @@
  */
 
 const React = require('react');
-const { XStack, Text } = require('@tamagui/core');
+const { XStack, Text } = require('tamagui');
 
 function getScoreColor(score) {
   if (score >= 70) return '$success';

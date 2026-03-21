@@ -9,11 +9,12 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
 
 class ApiClient {
   constructor(baseUrl = API_BASE_URL) {
-    this.baseUrl = baseUrl;
+    this.baseUrl = baseUrl.replace(/\/+$/, '');
   }
 
   async request(endpoint, options = {}) {
-    const url = `${this.baseUrl}${endpoint}`;
+    const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = `${this.baseUrl}${path}`;
 
     const config = {
       ...options,
@@ -64,7 +65,8 @@ class ApiClient {
   }
 
   async upload(endpoint, formData, options = {}) {
-    const url = `${this.baseUrl}${endpoint}`;
+    const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = `${this.baseUrl}${path}`;
 
     try {
       const response = await fetch(url, {
