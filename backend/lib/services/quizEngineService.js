@@ -50,7 +50,14 @@ export async function startSession(userId, moduleId, type, cardCount = 10, speci
     throw new Error('No flashcards found in this module');
   }
 
-  const flashcardIds = flashcards.map(fc => fc.id);
+  let flashcardIds = flashcards.map(fc => fc.id);
+  let preGeneratedQuestions = null;
+
+  if (type === 'multiple_choice' && specificFlashcardId) {
+    // Generate exactly 8 questions for the specified flashcard
+    flashcardIds = Array(8).fill(specificFlashcardId);
+    preGeneratedQuestions = await generateMultipleChoiceQuestionsBatch(flashcards[0], 8);
+  }
 
   const sessionRef = await db.collection('quiz_sessions').add({
     userId,
@@ -58,6 +65,7 @@ export async function startSession(userId, moduleId, type, cardCount = 10, speci
     type,
     status: 'active',
     flashcardIds,
+    preGeneratedQuestions,
     currentFlashcardIndex: 0,
     responses: [],
     scoreChanges: {},
@@ -75,7 +83,7 @@ export async function startSession(userId, moduleId, type, cardCount = 10, speci
     status: 'active',
     flashcardIds,
     currentFlashcardIndex: 0,
-    flashcardCount: flashcards.length,
+    flashcardCount: flashcardIds.length,
   };
 
   return session;
@@ -299,6 +307,23 @@ export async function getNextQuestion(sessionId) {
   const session = await getSession(sessionId);
   if (!session) throw new Error('Session not found');
   if (session.status !== 'active') throw new Error('Session is not active');
+
+  // Fast path for pre-generated questions (e.g. 8 multiple-choice batch)
+  if (session.type === 'multiple_choice' && session.preGeneratedQuestions) {
+    if (session.currentFlashcardIndex >= session.preGeneratedQuestions.length) return null;
+
+    const question = session.preGeneratedQuestions[session.currentFlashcardIndex];
+    
+    await db.collection('quiz_sessions').doc(sessionId).update({
+      currentFlashcardIndex: session.currentFlashcardIndex + 1,
+    });
+
+    return {
+      ...question,
+      questionNumber: session.currentFlashcardIndex + 1,
+      totalQuestions: session.preGeneratedQuestions.length,
+    };
+  }
 
   // For image sessions, adapt question order based on prior answers
   if (session.type === 'image' && session.currentFlashcardIndex > 0 && session.responses?.length > 0) {
@@ -584,6 +609,68 @@ const multipleChoiceSchema = z.object({
   options: z.array(z.string()).length(4).describe('Exactly 4 answer options including the correct one'),
 });
 
+const multipleChoiceBatchSchema = z.object({
+  questions: z.array(z.object({
+    question: z.string().describe('The quiz question text'),
+    correctAnswer: z.string().describe('The correct answer'),
+    options: z.array(z.string()).length(4).describe('Exactly 4 answer options including the correct one'),
+  })).describe('Exactly 8 different multiple-choice questions'),
+});
+
+/**
+ * Generate a batch of 8 multiple choice questions from a flashcard using AI
+ * @param {Object} flashcard - The flashcard being quizzed
+ * @param {number} count - Number of questions to generate
+ * @returns {Promise<Array>}
+ */
+async function generateMultipleChoiceQuestionsBatch(flashcard, count = 8) {
+  const content = flashcard.content || '';
+  
+  try {
+    const { object } = await generateObject({
+      model: gateway(AI_MODEL),
+      system: `You are creating a multiple-choice quiz from study material content.
+
+Rules:
+1. Generate exactly ${count} distinct multiple-choice questions testing understanding of the content.
+2. The correct answer must be directly derived from the content.
+3. Generate 3 plausible but incorrect distractor answers for each question.
+4. Distractors should be related to the topic but clearly wrong.
+5. Make all 4 options roughly the same length and format.
+6. Ensure the questions cover different aspects, facts, or angles of the content.`,
+      prompt: `Study material content:
+"""
+${content}
+"""
+
+Generate exactly ${count} multiple-choice questions with 4 answer options each (1 correct, 3 incorrect distractors).`,
+      schema: multipleChoiceBatchSchema,
+    });
+
+    return object.questions.map((q, idx) => ({
+      id: `q_${flashcard.id}_batch_${Date.now()}_${idx}`,
+      flashcardId: flashcard.id,
+      type: 'multiple_choice',
+      question: q.question,
+      correctAnswer: q.correctAnswer,
+      options: shuffleArrayWithResult(q.options),
+      imageUrl: null,
+    }));
+  } catch (error) {
+    console.error('AI multiple choice batch generation failed:', error);
+    // Fallback
+    return Array(count).fill(0).map((_, idx) => ({
+      id: `q_${flashcard.id}_fallback_${Date.now()}_${idx}`,
+      flashcardId: flashcard.id,
+      type: 'multiple_choice',
+      question: `Question ${idx + 1} about this topic (generation failed)`,
+      correctAnswer: 'Correct Answer',
+      options: shuffleArrayWithResult(['Correct Answer', 'Wrong Answer A', 'Wrong Answer B', 'Wrong Answer C']),
+      imageUrl: null,
+    }));
+  }
+}
+
 /**
  * Generate a multiple choice question from a flashcard using AI
  * @param {Object} flashcard - The flashcard being quizzed
@@ -749,7 +836,10 @@ export async function evaluateResponse(sessionId, questionId, userAnswer) {
   if (session.status !== 'active') throw new Error('Session is not active');
 
   // Find the flashcard from the question ID
-  const flashcardId = questionId.split('_')[1];
+  const flashcardId = questionId.includes('_batch_') || questionId.includes('_fallback_') 
+    ? questionId.split('_')[1] 
+    : questionId.split('_')[1];
+  
   const flashcardDoc = await db.collection('flashcards').doc(flashcardId).get();
 
   if (!flashcardDoc.exists) {
@@ -758,15 +848,40 @@ export async function evaluateResponse(sessionId, questionId, userAnswer) {
 
   const flashcard = { id: flashcardDoc.id, ...flashcardDoc.data() };
 
-  // Get the original question from session responses if available, or use content
-  const originalQuestion = session.lastQuestion || 'General understanding';
-  
-  // Use AI to evaluate the answer against the content
-  const { isCorrect, confidence } = await evaluateWithAI(
-    flashcard.content || '',
-    userAnswer,
-    originalQuestion
-  );
+  let isCorrect = false;
+  let confidence = 0;
+  let correctAnswerText = '';
+  let feedbackText = '';
+
+  // Fast path for pre-generated multiple choice questions
+  if (session.type === 'multiple_choice' && session.preGeneratedQuestions) {
+    const question = session.preGeneratedQuestions.find(q => q.id === questionId);
+    if (question) {
+      correctAnswerText = question.correctAnswer;
+      // Since it's multiple choice, the user answer should match the exact option text
+      isCorrect = userAnswer === question.correctAnswer;
+      confidence = isCorrect ? 1.0 : 0.9;
+      feedbackText = isCorrect 
+        ? "Correct! That is exactly right." 
+        : `Not quite. The correct answer is: "${question.correctAnswer}"`;
+    }
+  }
+
+  if (!correctAnswerText) {
+    // Legacy / fallback path
+    const originalQuestion = session.lastQuestion || 'General understanding';
+    
+    // Use AI to evaluate the answer against the content
+    const evalResult = await evaluateWithAI(
+      flashcard.content || '',
+      userAnswer,
+      originalQuestion
+    );
+    isCorrect = evalResult.isCorrect;
+    confidence = evalResult.confidence;
+    correctAnswerText = flashcard.content?.substring(0, 200) || '';
+    feedbackText = generateFeedback(isCorrect, correctAnswerText, userAnswer, confidence);
+  }
 
   // Update score via scoring service
   const scoreResult = await updateFlashcardScore(flashcardId, isCorrect, confidence);
@@ -777,7 +892,7 @@ export async function evaluateResponse(sessionId, questionId, userAnswer) {
     questionId,
     questionType: inferQuestionType(questionId),
     userAnswer,
-    correctAnswer: flashcard.content?.substring(0, 200) || '',
+    correctAnswer: correctAnswerText,
     isCorrect,
     scoreChange: scoreResult.scoreDelta,
     confidence,
@@ -805,8 +920,8 @@ export async function evaluateResponse(sessionId, questionId, userAnswer) {
     isCorrect,
     scoreChange: scoreResult.scoreDelta,
     newScore: scoreResult.newScore,
-    feedback: generateFeedback(isCorrect, flashcard.content?.substring(0, 200) || '', userAnswer, confidence),
-    correctAnswer: flashcard.content?.substring(0, 200) || '',
+    feedback: feedbackText,
+    correctAnswer: correctAnswerText,
   };
 }
 
