@@ -14,11 +14,14 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
+  const [error, setError] = useState(null);
   
   // Mapping of question.id -> selected option text
   const [answers, setAnswers] = useState({});
   // Mapping of question.id -> { isCorrect, feedbackText, correctAnswer }
   const [feedbacks, setFeedbacks] = useState(null);
+
+  console.log('MultipleChoiceQuizScreen mounted', { moduleId, flashcardId: flashcard?.id });
 
   // Start Session
   useEffect(() => {
@@ -27,6 +30,7 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
     async function initQuiz() {
       setIsLoading(true);
       setGenerationProgress(0);
+      setError(null);
       
       // Simulate progress up to 95% over 8 seconds (typical AI generation time)
       progressInterval = setInterval(() => {
@@ -37,7 +41,11 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
       }, 100);
 
       try {
+        console.log('Calling startSession with:', { userId: user.id, moduleId, flashcardId: flashcard?.id });
+        
         const res = await quizService.startSession(user.id, moduleId, 'multiple_choice', 1, flashcard?.id);
+        
+        console.log('startSession response:', res);
         
         // Complete the progress bar
         setGenerationProgress(100);
@@ -47,18 +55,22 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
         setTimeout(() => {
           if (res.success) {
             setSession(res.session);
-            if (res.session.preGeneratedQuestions) {
+            if (res.session.preGeneratedQuestions && res.session.preGeneratedQuestions.length > 0) {
               setQuestions(res.session.preGeneratedQuestions);
+              console.log('Questions loaded:', res.session.preGeneratedQuestions.length);
             } else {
-              console.error('No pre-generated questions returned.');
+              console.error('No pre-generated questions returned.', res.session);
+              setError('No questions were generated. The flashcard may be empty.');
             }
           } else {
-            console.error('Failed to start session');
+            console.error('Failed to start session:', res);
+            setError(res.error || 'Failed to start session');
           }
           setIsLoading(false);
         }, 300);
       } catch (err) {
-        console.error(err);
+        console.error('Error starting session:', err);
+        setError(err.message || 'An error occurred');
         clearInterval(progressInterval);
         setIsLoading(false);
       }
@@ -127,6 +139,18 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
           <Progress value={generationProgress} indicatorClassName="bg-primary" className="h-3" />
           <p className="text-xs text-text-muted">{Math.round(generationProgress)}%</p>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-bg gap-4 p-6">
+        <div className="text-center">
+          <p className="text-error font-medium mb-2">Error</p>
+          <p className="text-text-secondary text-sm mb-4">{error}</p>
+        </div>
+        <Button onClick={onBack}>Go Back</Button>
       </div>
     );
   }
