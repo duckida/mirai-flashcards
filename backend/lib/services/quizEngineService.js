@@ -10,6 +10,7 @@ import { getFirestore } from '../firebase/admin.js';
 import { gateway, generateObject, generateText } from 'ai';
 import { z } from 'zod';
 import { updateFlashcardScore } from './scoringService.js';
+import { generateQuizImage } from './imageService.js';
 
 const db = getFirestore();
 
@@ -165,12 +166,123 @@ function shuffleArray(array) {
 }
 
 // ============================================================
+// Dynamic Question Rephrasing (Image Quiz)
+// ============================================================
+
+/**
+ * Rephrase a flashcard question using AI so the quiz question is
+ * distinct from the original flashcard text. Caches the rephrased
+ * question in the session to avoid re-generating on retries.
+ * @param {Object} flashcard - The flashcard to rephrase
+ * @param {string} [moduleContext] - Module/topic name for context
+ * @returns {Promise<string>} Rephrased question text
+ */
+async function rephraseQuestionWithAI(flashcard, moduleContext) {
+  try {
+    const { text } = await generateText({
+      model: gateway(AI_MODEL),
+      system: `You are a quiz question writer. Rephrase the given flashcard question so it tests the same knowledge but uses different wording or a different angle. Keep it concise (1-2 sentences). Do NOT include the answer in the rephrased question.`,
+      prompt: `Original question: "${flashcard.question}"
+Original answer: "${flashcard.answer}"
+${moduleContext ? `Topic: ${moduleContext}` : ''}
+
+Rephrase the question:`,
+    });
+
+    const rephrased = text.trim().replace(/^["']|["']$/g, '');
+    return rephrased || flashcard.question;
+  } catch (error) {
+    console.error('Question rephrasing failed, using original:', error.message);
+    return flashcard.question;
+  }
+}
+
+/**
+ * Generate a contextual image for a quiz question.
+ * Returns null if generation fails (graceful degradation).
+ * @param {string} questionText - The question text to illustrate
+ * @param {Object} flashcard - The flashcard (for caching key)
+ * @param {string} [moduleName] - Module name for context
+ * @returns {Promise<string|null>} Image data URL or null
+ */
+async function generateImageForQuestion(questionText, flashcard, moduleName) {
+  try {
+    const result = await generateQuizImage(questionText, {
+      context: moduleName || '',
+      flashcardId: flashcard.id,
+      questionId: `img_${flashcard.id}`,
+      size: '1024x1024',
+    });
+
+    if (result.success && result.image) {
+      return result.image.url;
+    }
+    return null;
+  } catch (error) {
+    console.error('Image generation failed for question:', error.message);
+    return null;
+  }
+}
+
+// ============================================================
+// Adaptive Question Selection
+// ============================================================
+
+/**
+ * Reorder remaining flashcards in a session based on prior answers.
+ * Cards that were answered incorrectly get pushed earlier in the queue.
+ * @param {Object} session - The current quiz session
+ * @returns {Promise<string[]>} Reordered flashcard IDs for remaining questions
+ */
+async function adaptQuestionOrder(session) {
+  const answered = session.responses || [];
+  const answeredIds = new Set(answered.map(r => r.flashcardId));
+
+  // Separate remaining flashcards
+  const remaining = session.flashcardIds.filter(id => !answeredIds.has(id));
+  if (remaining.length <= 1) return remaining;
+
+  // Build a score map from the session's score changes
+  const scoreMap = session.scoreChanges || {};
+
+  // Fetch current knowledge scores for remaining flashcards
+  const scoreEntries = await Promise.all(
+    remaining.map(async (id) => {
+      const doc = await db.collection('flashcards').doc(id).get();
+      const score = doc.exists ? (doc.data().knowledgeScore || 0) : 0;
+      return { id, score };
+    })
+  );
+
+  // Sort ascending: lowest score first (prioritize weak cards)
+  scoreEntries.sort((a, b) => a.score - b.score);
+
+  // Randomize within score tiers for variety
+  const tiers = {};
+  scoreEntries.forEach(entry => {
+    const tier = Math.floor(entry.score / 20) * 20;
+    if (!tiers[tier]) tiers[tier] = [];
+    tiers[tier].push(entry.id);
+  });
+
+  const result = [];
+  Object.keys(tiers).map(Number).sort((a, b) => a - b).forEach(tier => {
+    shuffleArray(tiers[tier]);
+    result.push(...tiers[tier]);
+  });
+
+  return result;
+}
+
+// ============================================================
 // Exercise Type Generation
 // ============================================================
 
 /**
  * Get the next question for a quiz session
- * Assigns an exercise type and generates the question
+ * Assigns an exercise type and generates the question.
+ * For image-type sessions, rephrases the question via AI and generates
+ * a contextual image. Also applies adaptive question selection.
  * @param {string} sessionId
  * @returns {Promise<Object|null>} Quiz question or null if session is complete
  */
@@ -178,6 +290,29 @@ export async function getNextQuestion(sessionId) {
   const session = await getSession(sessionId);
   if (!session) throw new Error('Session not found');
   if (session.status !== 'active') throw new Error('Session is not complete');
+
+  // For image sessions, adapt question order based on prior answers
+  if (session.type === 'image' && session.currentFlashcardIndex > 0 && session.responses?.length > 0) {
+    const reordered = await adaptQuestionOrder(session);
+    if (reordered.length > 0) {
+      // Only update if we have remaining cards not yet in the answered set
+      const answeredIds = new Set(session.responses.map(r => r.flashcardId));
+      const newOrder = reordered.filter(id => !answeredIds.has(id));
+      if (newOrder.length > 0) {
+        await db.collection('quiz_sessions').doc(sessionId).update({
+          flashcardIds: [
+            ...session.flashcardIds.slice(0, session.currentFlashcardIndex),
+            ...newOrder,
+          ],
+        });
+        session.flashcardIds = [
+          ...session.flashcardIds.slice(0, session.currentFlashcardIndex),
+          ...newOrder,
+        ];
+      }
+    }
+  }
+
   if (session.currentFlashcardIndex >= session.flashcardIds.length) return null;
 
   const flashcardId = session.flashcardIds[session.currentFlashcardIndex];
@@ -200,6 +335,15 @@ export async function getNextQuestion(sessionId) {
     ...doc.data(),
   }));
 
+  // Get module name for context
+  let moduleName = '';
+  try {
+    const moduleDoc = await db.collection('modules').doc(session.moduleId).get();
+    if (moduleDoc.exists) moduleName = moduleDoc.data().name || '';
+  } catch (e) {
+    // Module name is optional context
+  }
+
   // Select exercise type based on distribution
   const exerciseType = selectExerciseType(session.currentFlashcardIndex, session.flashcardIds.length);
 
@@ -216,6 +360,16 @@ export async function getNextQuestion(sessionId) {
     default:
       question = generateFreeRecallQuestion(flashcard);
       break;
+  }
+
+  // For image-type sessions: rephrase the question and generate an image
+  if (session.type === 'image') {
+    const rephrasedText = await rephraseQuestionWithAI(flashcard, moduleName);
+    question.question = rephrasedText;
+
+    // Generate image in parallel with advancing the session
+    const imageUrl = await generateImageForQuestion(rephrasedText, flashcard, moduleName);
+    question.imageUrl = imageUrl; // May be null if generation failed (graceful degradation)
   }
 
   // Advance session index
@@ -680,5 +834,8 @@ export default {
   getNextQuestion,
   evaluateResponse,
   buildSessionSummary,
+  rephraseQuestionWithAI,
+  generateImageForQuestion,
+  adaptQuestionOrder,
   EXERCISE_TYPES,
 };

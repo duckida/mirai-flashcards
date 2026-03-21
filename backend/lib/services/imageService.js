@@ -1,6 +1,8 @@
 /**
  * Image Service
- * Handles AI image generation for quiz questions using Vercel AI Gateway
+ * Handles AI image generation for quiz questions using Vercel AI Gateway.
+ * Includes in-memory caching to avoid regenerating images for the same
+ * flashcard within a session window.
  */
 
 import { openai } from '@ai-sdk/openai';
@@ -28,6 +30,73 @@ const IMAGE_CONFIG = {
   size: '1024x1024',
   quality: 'standard',
 };
+
+/**
+ * In-memory image cache.
+ * Keys are `flashcardId|questionHash` so different rephrasings of the
+ * same flashcard can have distinct images while still caching repeats.
+ * Entries expire after IMAGE_CACHE_TTL_MS (default 30 minutes).
+ */
+const imageCache = new Map();
+const IMAGE_CACHE_TTL_MS = parseInt(process.env.IMAGE_CACHE_TTL_MS, 10) || 30 * 60 * 1000;
+
+/**
+ * Build a cache key from a flashcard ID and question text
+ * @param {string} flashcardId
+ * @param {string} question
+ * @returns {string}
+ */
+function buildCacheKey(flashcardId, question) {
+  const hash = question.length + ':' + question.substring(0, 60);
+  return `${flashcardId}|${hash}`;
+}
+
+/**
+ * Retrieve a cached image result
+ * @param {string} flashcardId
+ * @param {string} question
+ * @returns {ImageGenerationResult|null}
+ */
+function getCachedImage(flashcardId, question) {
+  const key = buildCacheKey(flashcardId, question);
+  const entry = imageCache.get(key);
+  if (!entry) return null;
+
+  if (Date.now() - entry.timestamp > IMAGE_CACHE_TTL_MS) {
+    imageCache.delete(key);
+    return null;
+  }
+
+  return entry.result;
+}
+
+/**
+ * Store an image result in cache
+ * @param {string} flashcardId
+ * @param {string} question
+ * @param {ImageGenerationResult} result
+ */
+function cacheImage(flashcardId, question, result) {
+  const key = buildCacheKey(flashcardId, question);
+  imageCache.set(key, { result, timestamp: Date.now() });
+
+  // Evict stale entries if cache grows large
+  if (imageCache.size > 200) {
+    const now = Date.now();
+    for (const [k, v] of imageCache.entries()) {
+      if (now - v.timestamp > IMAGE_CACHE_TTL_MS) {
+        imageCache.delete(k);
+      }
+    }
+  }
+}
+
+/**
+ * Clear the entire image cache (useful for testing)
+ */
+function clearImageCache() {
+  imageCache.clear();
+}
 
 /**
  * Creates the image model client routed through Vercel AI Gateway
@@ -62,16 +131,27 @@ function buildImagePrompt(question, context) {
 }
 
 /**
- * Generates an image for a quiz question
+ * Generates an image for a quiz question.
+ * Checks the in-memory cache first; on cache miss generates via the API.
  * @param {string} question - The quiz question text
  * @param {Object} [options] - Generation options
  * @param {string} [options.context] - Additional context (module topic)
  * @param {string} [options.questionId] - Question ID for tracking
+ * @param {string} [options.flashcardId] - Flashcard ID for caching
  * @param {string} [options.size] - Image size (e.g., '1024x1024')
  * @param {string} [options.quality] - Image quality ('standard' or 'hd')
  * @returns {Promise<ImageGenerationResult>}
  */
 async function generateQuizImage(question, options = {}) {
+  // Check cache first
+  if (options.flashcardId) {
+    const cached = getCachedImage(options.flashcardId, question);
+    if (cached) {
+      console.log('Image cache hit for flashcard:', options.flashcardId);
+      return cached;
+    }
+  }
+
   try {
     const prompt = buildImagePrompt(question, options.context);
     console.log('Generating image for question:', question.substring(0, 80) + '...');
@@ -94,7 +174,7 @@ async function generateQuizImage(question, options = {}) {
 
     console.log('Image generated successfully');
 
-    return {
+    const imageResult = {
       success: true,
       image: {
         url: dataUrl,
@@ -102,6 +182,13 @@ async function generateQuizImage(question, options = {}) {
         questionId: options.questionId || null,
       },
     };
+
+    // Store in cache
+    if (options.flashcardId) {
+      cacheImage(options.flashcardId, question, imageResult);
+    }
+
+    return imageResult;
 
   } catch (error) {
     console.error('Image generation failed:', error);
@@ -159,6 +246,9 @@ export {
   batchGenerateImages,
   buildImagePrompt,
   checkConfiguration,
+  getCachedImage,
+  cacheImage,
+  clearImageCache,
   IMAGE_CONFIG,
 };
 
@@ -167,5 +257,8 @@ export default {
   batchGenerateImages,
   buildImagePrompt,
   checkConfiguration,
+  getCachedImage,
+  cacheImage,
+  clearImageCache,
   IMAGE_CONFIG,
 };

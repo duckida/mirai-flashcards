@@ -14,6 +14,104 @@ const useQuiz = require('../hooks/useQuiz');
 const QuizResultsScreen = require('./QuizResultsScreen');
 const moduleService = require('../services/moduleService');
 
+/**
+ * Displays an AI-generated image for a quiz question.
+ * Shows a loading spinner while the image loads,
+ * and gracefully degrades if the image is unavailable.
+ */
+function ImageDisplay({ imageUrl, questionText }) {
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(false);
+
+  // Reset state when image URL changes
+  useEffect(() => {
+    setLoaded(false);
+    setError(false);
+  }, [imageUrl]);
+
+  if (!imageUrl) {
+    return (
+      <Card
+        padding="$4"
+        backgroundColor="$backgroundHover"
+        borderColor="$borderColor"
+        borderWidth={1}
+        alignItems="center"
+        justifyContent="center"
+        minHeight={200}
+      >
+        <YStack gap="$2" alignItems="center">
+          <Text fontSize="$3" color="$textSecondary">
+            No image available
+          </Text>
+          <Text fontSize="$1" color="$textSecondary" textAlign="center">
+            Answer the question below
+          </Text>
+        </YStack>
+      </Card>
+    );
+  }
+
+  return (
+    <Card
+      overflow="hidden"
+      backgroundColor="$backgroundHover"
+      borderColor="$borderColor"
+      borderWidth={1}
+      borderRadius="$4"
+    >
+      <YStack position="relative" minHeight={200}>
+        {!loaded && !error && (
+          <YStack
+            position="absolute"
+            top={0}
+            left={0}
+            right={0}
+            bottom={0}
+            alignItems="center"
+            justifyContent="center"
+            zIndex={1}
+          >
+            <Spinner size="large" color="$primary" />
+            <Text marginTop="$2" fontSize="$2" color="$textSecondary">
+              Generating image...
+            </Text>
+          </YStack>
+        )}
+        {error ? (
+          <YStack
+            padding="$4"
+            alignItems="center"
+            justifyContent="center"
+            minHeight={200}
+          >
+            <Text fontSize="$3" color="$textSecondary">
+              Image unavailable
+            </Text>
+            <Text fontSize="$1" color="$textSecondary">
+              The question is still available below
+            </Text>
+          </YStack>
+        ) : (
+          <img
+            src={imageUrl}
+            alt={`Illustration for: ${questionText}`}
+            onLoad={() => setLoaded(true)}
+            onError={() => setError(true)}
+            style={{
+              width: '100%',
+              maxHeight: 300,
+              objectFit: 'contain',
+              display: loaded ? 'block' : 'none',
+              backgroundColor: '#f5f5f5',
+            }}
+          />
+        )}
+      </YStack>
+    </Card>
+  );
+}
+
 function MultipleChoiceQuestion({ question, onSelect, selectedAnswer, isAnswered }) {
   return (
     <YStack gap="$3">
@@ -429,6 +527,14 @@ function ImageQuizScreen({ moduleId, onBack, onNavigate, screens }) {
                 </Text>
               </XStack>
             </XStack>
+
+            {/* AI-Generated Image */}
+            {currentQuestion.imageUrl !== undefined && (
+              <ImageDisplay
+                imageUrl={currentQuestion.imageUrl}
+                questionText={currentQuestion.question}
+              />
+            )}
 
             {/* Question */}
             {currentQuestion.type === 'multiple_choice' && (
