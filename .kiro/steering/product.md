@@ -55,7 +55,7 @@ AI Flashcard Quizzer is an AI-powered learning platform that digitizes physical 
 ## Technical Constraints
 
 - Backend: Next.js on Vercel (serverless)
-- Frontend: React Native Web with Tamagui (cross-platform)
+- Frontend: React with Vite + Tailwind CSS + shadcn/ui
 - Database: Firestore (real-time, scalable)
 - Storage: Vercel Blob (image uploads)
 - External APIs: OpenAI (vision, generation), ElevenLabs (speech), Canva (presentations)

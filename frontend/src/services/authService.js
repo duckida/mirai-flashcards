@@ -1,111 +1,51 @@
-/**
- * Authentication Service (Frontend)
- *
- * Handles authentication state and communicates with the backend auth API.
- */
-
-const apiClient = require('./apiClient');
+import { apiClient } from './apiClient'
 
 class AuthService {
   constructor() {
-    this._user = null;
-    this._isLoading = false;
-    this._listeners = [];
-  }
-
-  get user() {
-    return this._user;
-  }
-
-  get isLoading() {
-    return this._isLoading;
-  }
-
-  get isAuthenticated() {
-    return this._user !== null;
+    this._user = null
+    this._listeners = new Set()
   }
 
   subscribe(listener) {
-    this._listeners.push(listener);
-    return () => {
-      this._listeners = this._listeners.filter((l) => l !== listener);
-    };
+    this._listeners.add(listener)
+    return () => this._listeners.delete(listener)
   }
 
   _notify() {
-    this._listeners.forEach((listener) =>
-      listener({
-        user: this._user,
-        isLoading: this._isLoading,
-        isAuthenticated: this.isAuthenticated,
-      })
-    );
+    const state = {
+      user: this._user,
+      isLoading: false,
+      isAuthenticated: this._user !== null,
+    }
+    this._listeners.forEach((fn) => fn(state))
   }
 
-  setLoading(isLoading) {
-    this._isLoading = isLoading;
-    this._notify();
+  setUser(user) {
+    this._user = user
+    this._notify()
+  }
+
+  clearUser() {
+    this._user = null
+    this._notify()
   }
 
   async checkSession() {
     try {
-      this.setLoading(true);
-      const response = await apiClient.get('/api/user');
-      this._user = response.user || null;
-      this._notify();
-      return this._user;
-    } catch (error) {
-      this._user = null;
-      this._notify();
-      return null;
-    } finally {
-      this.setLoading(false);
+      const data = await apiClient.get('/api/user')
+      this._user = data.user
+    } catch {
+      this._user = null
     }
-  }
-
-  initiateLogin() {
-    window.location.href = `${apiClient.baseUrl}/api/auth/login`;
-  }
-
-  async logout() {
-    try {
-      this.setLoading(true);
-      await apiClient.post('/api/auth/logout', {});
-      this._user = null;
-      this._notify();
-      window.location.href = '/';
-    } catch (error) {
-      console.error('Logout failed:', error);
-      throw error;
-    } finally {
-      this.setLoading(false);
-    }
+    this._notify()
   }
 
   async updatePreferences(preferences) {
-    try {
-      const response = await apiClient.patch('/api/user', { preferences });
-      this._user = response.user;
-      this._notify();
-      return this._user;
-    } catch (error) {
-      console.error('Failed to update preferences:', error);
-      throw error;
-    }
-  }
-
-  setUser(user) {
-    this._user = user;
-    this._notify();
-  }
-
-  clearUser() {
-    this._user = null;
-    this._notify();
+    const data = await apiClient.patch('/api/user', { preferences })
+    this._user = data.user
+    this._notify()
+    return data.user
   }
 }
 
-const authService = new AuthService();
-
-module.exports = authService;
-module.exports.AuthService = AuthService;
+export const authService = new AuthService()

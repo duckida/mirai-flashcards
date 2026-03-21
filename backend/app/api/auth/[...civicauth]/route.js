@@ -15,6 +15,11 @@
  */
 
 import { handler } from '@civic/auth/nextjs';
+import { preflightResponse, addCorsHeaders } from '@/lib/api/cors.js';
 
-export const GET = handler();
-export const POST = handler();
+const civicGet = handler();
+const civicPost = handler();
+
+export const GET = civicGet;
+export const POST = civicPost;
+export const OPTIONS = () => preflightResponse();

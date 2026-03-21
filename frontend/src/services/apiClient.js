@@ -1,96 +1,64 @@
-/**
- * API Client
- *
- * HTTP client for communicating with the backend API.
- * Handles authentication, error handling, and request/response formatting.
- */
-
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+const BASE_URL = import.meta.env.VITE_API_URL || ''
 
 class ApiClient {
-  constructor(baseUrl = API_BASE_URL) {
-    this.baseUrl = baseUrl.replace(/\/+$/, '');
-  }
-
   async request(endpoint, options = {}) {
-    const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    const url = `${this.baseUrl}${path}`;
-
+    const url = `${BASE_URL}${endpoint}`
     const config = {
+      credentials: 'include',
       ...options,
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
       },
-      credentials: 'include',
-    };
+    }
 
-    try {
-      const response = await fetch(url, config);
-      const data = await response.json();
+    const response = await fetch(url, config)
+    const data = await response.json()
 
-      if (!response.ok) {
-        throw new Error(data.error || `Request failed with status ${response.status}`);
+    if (!response.ok) {
+      throw new Error(data.error || `Request failed with status ${response.status}`)
+    }
+
+    return data
+  }
+
+  get(endpoint, options) {
+    return this.request(endpoint, { method: 'GET', ...options })
+  }
+
+  post(endpoint, body, options) {
+    return this.request(endpoint, { method: 'POST', body: JSON.stringify(body), ...options })
+  }
+
+  patch(endpoint, body, options) {
+    return this.request(endpoint, { method: 'PATCH', body: JSON.stringify(body), ...options })
+  }
+
+  delete(endpoint, options) {
+    return this.request(endpoint, { method: 'DELETE', ...options })
+  }
+
+  upload(endpoint, formData, onProgress) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+      xhr.open('POST', `${BASE_URL}${endpoint}`)
+      xhr.withCredentials = true
+
+      if (onProgress) {
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100))
+        }
       }
 
-      return data;
-    } catch (error) {
-      console.error(`API Error [${endpoint}]:`, error);
-      throw error;
-    }
-  }
-
-  async get(endpoint, options = {}) {
-    return this.request(endpoint, { ...options, method: 'GET' });
-  }
-
-  async post(endpoint, body, options = {}) {
-    return this.request(endpoint, {
-      ...options,
-      method: 'POST',
-      body: JSON.stringify(body),
-    });
-  }
-
-  async patch(endpoint, body, options = {}) {
-    return this.request(endpoint, {
-      ...options,
-      method: 'PATCH',
-      body: JSON.stringify(body),
-    });
-  }
-
-  async delete(endpoint, options = {}) {
-    return this.request(endpoint, { ...options, method: 'DELETE' });
-  }
-
-  async upload(endpoint, formData, options = {}) {
-    const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    const url = `${this.baseUrl}${path}`;
-
-    try {
-      const response = await fetch(url, {
-        ...options,
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || `Upload failed with status ${response.status}`);
+      xhr.onload = () => {
+        const data = JSON.parse(xhr.responseText)
+        if (xhr.status >= 200 && xhr.status < 300) resolve(data)
+        else reject(new Error(data.error || 'Upload failed'))
       }
-
-      return data;
-    } catch (error) {
-      console.error(`Upload Error [${endpoint}]:`, error);
-      throw error;
-    }
+      xhr.onerror = () => reject(new Error('Upload failed'))
+      xhr.send(formData)
+    })
   }
 }
 
-const apiClient = new ApiClient();
-
-module.exports = apiClient;
-module.exports.ApiClient = ApiClient;
+export const apiClient = new ApiClient()

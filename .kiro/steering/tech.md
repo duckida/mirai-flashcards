@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a full-stack JavaScript application with a Next.js backend and React Native Web frontend, both deployed on Vercel.
+This is a full-stack JavaScript application with a Next.js backend and React frontend, both deployed on Vercel.
 
 ## Backend Stack
 
@@ -28,24 +28,23 @@ This is a full-stack JavaScript application with a Next.js backend and React Nat
 
 ## Frontend Stack
 
-**Framework**: React 19.2.4 with React Native Web
+**Framework**: React 19 with Vite
 
-**UI Library**: Tamagui 2.0.0-rc.29
-- Cross-platform component library
-- Built on React Native Web
-- Supports web, iOS, and Android
+**UI Components**: shadcn/ui + Tailwind CSS
+- Utility-first CSS with Tailwind
+- Copy-paste UI components (Button, Card, Badge, Progress, Input, etc.)
+- Purple accent theme with rounded elements
 
-**Build Tool**: Webpack 5
-- Development server with hot reload
-- Production bundling
+**Build Tool**: Vite
+- Fast HMR for development
+- Optimized production builds with Rollup
 
-**Transpiler**: Babel 7
-- `@babel/core` 7.29.0
-- `@babel/preset-env` 7.29.2
-- `@babel/preset-react` 7.28.5
-- `@tamagui/babel-plugin` 2.0.0-rc.29 - Tamagui optimization
+**Styling**: Tailwind CSS v4
+- Utility classes for all styling
+- Custom theme with purple primary colors
+- Responsive design with Tailwind breakpoints
 
-**Module System**: CommonJS (frontend), ES Modules (backend)
+**Module System**: ES Modules (both frontend and backend)
 
 ## External Services
 
@@ -95,17 +94,17 @@ npm start
 npm run lint
 ```
 
-### Frontend (React Native Web)
+### Frontend (React + Vite)
 
 ```bash
-# Development server with hot reload (http://localhost:8080)
-npm start
+# Development server with hot reload (http://localhost:3001)
+npm run dev
 
 # Production build
 npm run build
 
-# Linting (if configured)
-npm run lint
+# Preview production build
+npm run preview
 ```
 
 ## Environment Variables
@@ -143,6 +142,11 @@ npm run lint
 
 See `.env.local.example` for complete template.
 
+### Frontend (.env or .env.local)
+
+**API Configuration**:
+- `VITE_API_URL` - Backend API URL (default: empty, uses same origin or Vite proxy)
+
 ## Project Structure
 
 ```
@@ -175,18 +179,48 @@ backend/
 ├── eslint.config.mjs          # ESLint configuration
 ├── postcss.config.mjs         # PostCSS configuration
 ├── tailwind.config.js         # Tailwind CSS configuration
+├── vercel.json                # Vercel deployment configuration
 ├── package.json
 └── README.md
 
 frontend/
 ├── src/
-│   ├── App.js                 # Root component
-│   └── index.js               # Entry point
-├── public/
+│   ├── App.jsx                # Root component
+│   ├── index.css              # Global styles with Tailwind
+│   ├── screens/               # Screen components
+│   │   ├── AuthScreen.jsx
+│   │   ├── DashboardScreen.jsx
+│   │   ├── UploadImageScreen.jsx
+│   │   ├── ModuleDetailScreen.jsx
+│   │   ├── VoiceQuizScreen.jsx
+│   │   ├── ImageQuizScreen.jsx
+│   │   ├── QuizResultsScreen.jsx
+│   │   └── SettingsScreen.jsx
+│   ├── components/
+│   │   └── ui/                # shadcn/ui components
+│   │       ├── button.jsx
+│   │       ├── card.jsx
+│   │       ├── badge.jsx
+│   │       ├── progress.jsx
+│   │       ├── spinner.jsx
+│   │       ├── input.jsx
+│   │       └── textarea.jsx
+│   ├── services/              # API client and services
+│   │   ├── apiClient.js
+│   │   ├── authService.js
+│   │   ├── moduleService.js
+│   │   ├── flashcardService.js
+│   │   ├── quizService.js
+│   │   └── canvaService.js
+│   ├── hooks/                 # Custom React hooks
+│   │   ├── useAuth.js
+│   │   └── useQuiz.js
+│   └── lib/
+│       └── utils.js           # cn() utility for class merging
+├── public/                    # Static assets
 │   └── index.html             # HTML template
-├── webpack.config.js          # Webpack configuration
-├── .babelrc.js                # Babel configuration
-├── tamagui.config.js          # Tamagui theme and tokens
+├── vite.config.js             # Vite configuration
+├── vercel.json                # Vercel deployment configuration
 ├── package.json
 └── README.md
 ```
@@ -202,11 +236,19 @@ frontend/
 - Functional components with hooks
 - Props destructuring
 - Consistent component structure
+- JSX with Tailwind CSS classes
 
-**Tamagui Components**:
-- Use `YStack` and `XStack` for layouts
-- Use theme tokens for colors, spacing, sizing
-- Responsive design with `$sm`, `$md`, `$lg` breakpoints
+**Tailwind CSS**:
+- Use utility classes for all styling
+- Custom theme colors: `primary`, `success`, `warning`, `error`
+- Custom sizing: `text-text-primary`, `text-text-secondary`, `text-text-muted`
+- Rounded corners: `rounded-xl`, `rounded-2xl`, `rounded-3xl`
+- Responsive with mobile-first approach
+
+**shadcn/ui Components**:
+- Import from `@/components/ui/*`
+- Use variant props for styling (`variant="default|secondary|destructive|outline"`)
+- Size props: `size="sm|default|lg|icon"`
 
 **API Routes**:
 - RESTful conventions (GET, POST, PATCH, DELETE)
@@ -242,13 +284,14 @@ frontend/
 - Vercel Blob storage for images
 - Serverless functions for API routes
 
-**Frontend**: Can be deployed separately or as part of backend
-- Webpack build output to `dist/`
-- Deploy to Vercel, Netlify, or other static host
+**Frontend**: Vercel
+- Vite build output to `dist/`
+- SPA routing with rewrites to `index.html`
+- Deploys on git push
 
 ## Performance Considerations
 
-- **Code Splitting**: Lazy load screens and heavy components
+- **Code Splitting**: Vite handles automatic code splitting
 - **Image Optimization**: Compress and resize images before upload
 - **Caching**: Cache API responses and generated images
 - **Firestore Queries**: Use indexes for efficient queries
@@ -269,7 +312,6 @@ frontend/
 
 ## Monitoring and Debugging
 
-- Sentry for error tracking
 - Vercel Analytics for performance
 - Console logging for development
 - Firebase console for database monitoring

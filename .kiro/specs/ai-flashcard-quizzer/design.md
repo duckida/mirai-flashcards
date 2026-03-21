@@ -10,7 +10,7 @@ The AI Flashcard Quizzer is a web application that enables users to digitize phy
 - **Progressive Enhancement**: Core functionality works without voice or images; advanced features enhance the experience
 - **Resilience**: Graceful degradation when external services are unavailable
 - **User-Centric Scoring**: Knowledge scores drive personalized quiz difficulty and content prioritization
-- **Cross-Platform Consistency**: React Native + Tamagui ensures consistent UX across web and mobile
+- **Modern UI**: React + Tailwind CSS + shadcn/ui provides beautiful, consistent components
 
 ---
 
@@ -20,20 +20,20 @@ The AI Flashcard Quizzer is a web application that enables users to digitize phy
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    UI Layer (React Native + Tamagui)        │
+│              UI Layer (React + Tailwind CSS + shadcn/ui)    │
 │  Screens: Auth, Dashboard, Module, Flashcard, Quiz, Results │
 └─────────────────────────────────────────────────────────────┘
-                              ↓
+                               ↓
 ┌─────────────────────────────────────────────────────────────┐
 │              Application Layer (Services & Engines)          │
 │  Auth Service, Quiz Engine, Scanner, Classifier, Image Svc  │
 └─────────────────────────────────────────────────────────────┘
-                              ↓
+                               ↓
 ┌─────────────────────────────────────────────────────────────┐
 │                  Data Access Layer (Firestore)              │
 │  Collections: users, modules, flashcards, quiz_sessions     │
 └─────────────────────────────────────────────────────────────┘
-                              ↓
+                               ↓
 ┌─────────────────────────────────────────────────────────────┐
 │              External Service Integrations                   │
 │  Civic.ai (Auth), ElevenLabs (Speech), Canva MCP, AI Vision │
@@ -462,7 +462,7 @@ Dashboard (Module List)
 - "New Module" button
 - "Upload Image" button
 - Settings/Profile access
-- Tamagui components: `YStack`, `XStack`, `Card`, `Button`, `Text`
+- Tailwind CSS with shadcn/ui components: `Card`, `Button`, `Badge`, `Progress`, `Spinner`
 
 #### 3. Module Detail
 - Flashcard list with question/answer toggle
@@ -471,7 +471,7 @@ Dashboard (Module List)
 - "Start Voice Quiz" button
 - "Start Image Quiz" button
 - "Request Help Presentation" button
-- Tamagui components: `FlatList`, `Card`, `Button`, `Badge`
+- shadcn/ui components: `Card`, `Button`, `Badge`, `Progress`
 
 #### 4. Voice Quiz Session
 - Current question display
@@ -480,7 +480,7 @@ Dashboard (Module List)
 - "Next" button
 - Session progress indicator
 - Real-time speech feedback
-- Tamagui components: `YStack`, `Button`, `Text`, `Spinner`
+- shadcn/ui components: `Button`, `Spinner`, `CardContent`
 
 #### 5. Image Quiz Session
 - Question text
@@ -489,7 +489,7 @@ Dashboard (Module List)
 - Multiple choice options (if applicable)
 - Feedback display
 - Progress indicator
-- Tamagui components: `YStack`, `XStack`, `Input`, `Button`, `Image`
+- shadcn/ui components: `Card`, `CardContent`, `Input`, `Button`, `Image`
 
 #### 6. Quiz Results
 - Session summary (cards reviewed, correct/incorrect)
@@ -497,21 +497,21 @@ Dashboard (Module List)
 - Module aggregate score update
 - "Review Weak Cards" button
 - "Return to Module" button
-- Tamagui components: `YStack`, `Card`, `Text`, `Button`
+- shadcn/ui components: `Card`, `Button`, `Badge`
 
 #### 7. Flashcard Editor
 - Question input field
 - Answer input field
 - Validation error display
 - Save/Cancel buttons
-- Tamagui components: `YStack`, `Input`, `Button`, `Text`
+- shadcn/ui components: `Input`, `Textarea`, `Button`
 
 #### 8. Upload Image
 - Image picker/drag-and-drop zone
 - Upload progress indicator
 - Extracted flashcards preview
 - Confirm/Edit/Cancel buttons
-- Tamagui components: `YStack`, `Button`, `Text`, `Spinner`
+- shadcn/ui components: `Button`, `Spinner`, `CardContent`
 
 ---
 

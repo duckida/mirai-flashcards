@@ -1,62 +1,63 @@
-/**
- * useAuth Hook
- *
- * React hook for authentication state management.
- * Provides user info, loading state, and auth actions.
- */
+import { useState, useEffect, useCallback } from 'react'
+import { useCivicAuth } from '@civic/auth'
+import { authService } from '../services/authService'
 
-const { useState, useEffect, useCallback } = require('react');
-const authService = require('../services/authService');
-
-function useAuth() {
-  const [user, setUser] = useState(authService.user);
-  const [isLoading, setIsLoading] = useState(authService.isLoading);
-  const [error, setError] = useState(null);
+export default function useAuth() {
+  const civicAuth = useCivicAuth()
+  const [user, setUser] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    const unsubscribe = authService.subscribe(({ user, isLoading }) => {
-      setUser(user);
-      setIsLoading(isLoading);
-    });
+    if (civicAuth.isLoading) {
+      setIsLoading(true)
+      return
+    }
 
-    authService.checkSession();
+    if (civicAuth.user) {
+      const userData = {
+        id: civicAuth.user.id,
+        email: civicAuth.user.email,
+        name: civicAuth.user.name,
+        picture: civicAuth.user.picture,
+      }
+      authService.setUser(userData)
+      setUser(userData)
+    } else {
+      authService.clearUser()
+      setUser(null)
+    }
+    setIsLoading(false)
+  }, [civicAuth.isLoading, civicAuth.user])
 
-    return unsubscribe;
-  }, []);
-
-  const login = useCallback(() => {
-    setError(null);
-    authService.initiateLogin();
-  }, []);
+  const login = useCallback(() => civicAuth.signIn(), [civicAuth])
 
   const logout = useCallback(async () => {
-    setError(null);
+    setError(null)
     try {
-      await authService.logout();
+      await civicAuth.signOut()
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     }
-  }, []);
+  }, [civicAuth])
 
   const updatePreferences = useCallback(async (preferences) => {
-    setError(null);
+    setError(null)
     try {
-      return await authService.updatePreferences(preferences);
+      return await authService.updatePreferences(preferences)
     } catch (err) {
-      setError(err.message);
-      throw err;
+      setError(err.message)
+      throw err
     }
-  }, []);
+  }, [])
 
   return {
     user,
-    isLoading,
-    isAuthenticated: user !== null,
+    isLoading: isLoading || civicAuth.isLoading,
+    isAuthenticated: !!civicAuth.user,
     error,
     login,
     logout,
     updatePreferences,
-  };
+  }
 }
-
-module.exports = useAuth;

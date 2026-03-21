@@ -2,7 +2,7 @@
 
 ## Introduction
 
-An AI-powered flashcard learning app built for a hackathon. Users photograph physical notes or documents, which are scanned and digitized by AI into flashcards automatically sorted into topic modules. Users can then start a voice-based quiz session powered by real-time AI speech, where the AI quizzes them on their cards. Each card accumulates a knowledge score so the system can surface weak topics. Authentication is handled via Civic.ai, the app is hosted on Vercel, and Users can request Canva-generated explanation presentations for topics they're struggling with via Canva MCP. The UI is built with React Native and Tamagui as the component and styling library across all screens and UI components.
+An AI-powered flashcard learning app built for a hackathon. Users photograph physical notes or documents, which are scanned and digitized by AI into flashcards automatically sorted into topic modules. Users can then start a voice-based quiz session powered by real-time AI speech, where the AI quizzes them on their cards. Each card accumulates a knowledge score so the system can surface weak topics. Authentication is handled via Civic.ai, the app is hosted on Vercel, and Users can request Canva-generated explanation presentations for topics they're struggling with via Canva MCP. The UI is built with React, Vite, Tailwind CSS, and shadcn/ui components across all screens.
 
 ## Glossary
 
@@ -152,13 +152,14 @@ An AI-powered flashcard learning app built for a hackathon. Users photograph phy
 
 ### Requirement 11: UI Technology Constraints
 
-**User Story:** As a developer, I want the UI built with React Native and Tamagui, so that the app has a consistent, cross-platform component and styling foundation across all screens.
+**User Story:** As a developer, I want the UI built with React, Vite, and Tailwind CSS with shadcn/ui components, so that the app has a modern, beautiful, and consistent design foundation across all screens.
 
 #### Acceptance Criteria
 
-1. THE App SHALL implement all screens and UI components using React Native as the UI framework.
-2. THE App SHALL use Tamagui as the sole component and styling library for all UI elements across the App.
-3. WHEN a new screen or UI component is added, THE App SHALL use Tamagui-provided components and theme tokens rather than custom or third-party styling solutions.
+1. THE App SHALL implement all screens and UI components using React as the UI framework.
+2. THE App SHALL use Tailwind CSS for utility-first styling and shadcn/ui for reusable components.
+3. THE App SHALL use the purple accent theme with rounded elements for a modern aesthetic.
+4. WHEN a new screen or UI component is added, THE App SHALL use shadcn/ui components (Button, Card, Badge, Progress, Input, Textarea, Spinner) with Tailwind CSS classes.
 
 ---
 

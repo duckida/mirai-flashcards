@@ -22,8 +22,8 @@ Context and conventions live in `.kiro/steering/`:
 1. Read the relevant spec and steering docs before writing any code
 2. Follow the task list in `tasks.md` — respect dependencies and phase ordering
 3. Use JavaScript only (no TypeScript)
-4. Backend uses ES Modules (`import/export`), frontend uses CommonJS (`require/module.exports`)
-5. All UI must use React Native + Tamagui — no custom or third-party styling
+4. Backend uses ES Modules (`import/export`), frontend uses ES Modules (`import/export`)
+5. **All frontend UI must use Tailwind CSS with shadcn/ui components** — no inline styles, no custom CSS classes
 6. Check `backend/AGENTS.md` for Next.js-specific caveats
 7. After completing tasks, tick them off on the tasks md file, and commit all to github.
 
@@ -39,10 +39,11 @@ mirai-hackathon/
 │   ├── app/api/      # REST API endpoints
 │   ├── lib/          # Firebase admin, services (auth, scanner, quiz engine, speech, etc.)
 │   └── scripts/      # Database seeding, cleanup
-├── frontend/         # React Native Web + Tamagui UI
-│   ├── src/screens/  # 7 UI screens (Auth, Dashboard, Upload, Quiz, Results)
-│   ├── src/services/ # API client, auth, flashcard, quiz services
-│   └── src/hooks/    # useAuth, useQuiz, useSpeech
+├── frontend/         # React + Vite + Tailwind CSS + shadcn/ui
+│   ├── src/screens/  # 8 UI screens (Auth, Dashboard, Upload, ModuleDetail, VoiceQuiz, ImageQuiz, QuizResults, Settings)
+│   ├── src/components/ui/ # shadcn/ui components (Button, Card, Badge, Progress, Spinner, Input, Textarea)
+│   ├── src/services/ # API client, auth, module, flashcard, quiz services
+│   └── src/hooks/    # useAuth, useQuiz
 └── .kiro/            # Specs & steering docs
 ```
 
@@ -55,20 +56,66 @@ npm test                         # Run Jest tests
 npm run db:seed                  # Seed Firestore test data
 
 # Frontend
-cd frontend && npm start         # Start dev server (port 3001)
+cd frontend && npm run dev       # Start dev server (port 3001)
 npm run build                    # Build to dist/
 ```
 
 ### Architecture Notes
 - **Backend**: ES Modules, Firebase/Firestore, Vercel Blob, OpenAI via AI SDK
-- **Frontend**: CommonJS, React Native Web, Tamagui styling
+- **Frontend**: ES Modules, React, Vite, Tailwind CSS, shadcn/ui components
 - **Auth**: Civic.ai OAuth (`/api/auth/[...civicauth]`)
 - **API Routes**: `/api/flashcards`, `/api/modules`, `/api/quiz`, `/api/canva`
 - **Collections**: `users`, `modules`, `flashcards`, `quiz_sessions`, `presentations`
 
+### Frontend Tech Stack
+- **React 19** with Vite for fast builds
+- **Tailwind CSS v4** for utility-first styling
+- **shadcn/ui** components (Button, Card, Badge, Progress, Spinner, Input, Textarea)
+- **Vite aliases**: `@/` maps to `src/` (e.g., `@/components/ui/button`)
+
+### Frontend Component Usage
+```jsx
+// Button variants
+<Button variant="default" size="lg">Primary</Button>
+<Button variant="secondary">Secondary</Button>
+<Button variant="destructive">Danger</Button>
+<Button variant="outline">Outline</Button>
+
+// Card components
+<Card>
+  <CardHeader><CardTitle>Title</CardTitle></CardHeader>
+  <CardContent>Content</CardContent>
+</Card>
+
+// Badge variants (for scores)
+<Badge variant="success">70%</Badge>
+<Badge variant="warning">50%</Badge>
+<Badge variant="error">30%</Badge>
+
+// Progress bar
+<Progress value={75} indicatorClassName="bg-success" />
+
+// Spinner
+<Spinner size="lg" />
+
+// Input / Textarea
+<Input placeholder="Type here..." />
+<Textarea placeholder="Multi-line..." rows={3} />
+```
+
+### Tailwind CSS Theme
+Custom colors available:
+- `primary` / `primary-hover` / `primary-active` / `primary-lighter` / `primary-light`
+- `success` / `success-light`
+- `warning` / `warning-light`
+- `error` / `error-light`
+- `text-primary` / `text-secondary` / `text-muted`
+- `bg` / `bg-hover` / `bg-muted`
+- `border` / `border-hover`
+
 ### Environment Variables
 Backend `.env.local`: Firebase credentials, Civic.ai keys, ElevenLabs API key, OpenAI API key
-Frontend `REACT_APP_API_URL`: Backend API endpoint (default: http://localhost:3000)
+Frontend `VITE_API_URL`: Backend API endpoint (default: http://localhost:3000)
 
 ### Key Backend Services
 - **authService.js** - Civic.ai OAuth & session management

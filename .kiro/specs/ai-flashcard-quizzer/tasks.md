@@ -10,8 +10,8 @@ This document breaks down the AI Flashcard Quizzer specification into concrete, 
 
 ### 1.1 Project Initialization
 - [x] Make a folder for the backend and Initialize Next.js project with JavaScript
-- [x] Make a folder for the frontend and Configure React Native Web with Tamagui
-- [x] Set up Tamagui theme (purple accent, light theme, modern rounded elements) and design tokens
+- [x] Make a folder for the frontend and Set up React + Vite + Tailwind CSS + shadcn/ui
+- [x] Set up Tailwind CSS theme (purple accent, light theme, rounded elements) and shadcn/ui components
 
 ### 1.2 Environment and Deployment Setup
 - [x] Set up Vercel project and environment variables (this is for me to do)
@@ -89,7 +89,7 @@ This document breaks down the AI Flashcard Quizzer specification into concrete, 
 - [x] Implement batch flashcard persistence to Firestore
 
 ### 3.4 Upload Image Screen
-- [x] Create Upload Image screen with Tamagui components
+- [x] Create Upload Image screen with shadcn/ui components
 - [x] Implement image picker/drag-and-drop zone
 - [x] Implement upload progress indicator
 - [x] Display extracted flashcards preview
@@ -472,7 +472,7 @@ This document breaks down the AI Flashcard Quizzer specification into concrete, 
 - [x] Create Quiz Results Screen
 - [x] Create Settings Screen
 
-### 14.2 Tamagui Component Implementation
+### 14.2 shadcn/ui Component Implementation
 - [x] Implement YStack and XStack layouts
 - [x] Implement Card components for modules and flashcards
 - [x] Implement Button components with variants
@@ -490,7 +490,7 @@ This document breaks down the AI Flashcard Quizzer specification into concrete, 
 - [x] Implement navigation state management
 
 ### 14.4 Theme and Styling
-- [x] Define Tamagui theme tokens
+- [x] Define Tailwind CSS theme and shadcn/ui component variants
 - [x] Create consistent spacing and sizing
 - [x] Implement responsive design
 - [x] Create reusable styled components (ErrorBanner, ScoreBadge, ProgressBar, PresentationModal, FlashcardForm)

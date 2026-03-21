@@ -1,30 +1,16 @@
-# AI Flashcard Quizzer - Frontend
+# React + Vite
 
-React Native Web application with Tamagui UI components.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## Setup
+Currently, two official plugins are available:
 
-```bash
-npm install
-```
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-## Development
+## React Compiler
 
-```bash
-npm start
-```
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-The app will be available at http://localhost:3001
+## Expanding the ESLint configuration
 
-## Build
-
-```bash
-npm run build
-```
-
-## Tech Stack
-
-- React Native Web
-- Tamagui (UI components and styling)
-- Webpack (bundler)
-- Babel (transpiler)
+If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.

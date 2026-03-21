@@ -18,7 +18,7 @@ mirai-flashcards/
 │       └── structure.md        # This file
 ├── .vscode/                    # VS Code settings
 ├── backend/                    # Next.js backend application
-├── frontend/                   # React Native Web frontend application
+├── frontend/                   # React + Vite frontend application
 ├── .gitignore                  # Git ignore rules
 └── README.md                   # Repository root documentation
 ```
@@ -54,9 +54,9 @@ backend/app/api/
 │   │   └── summary/route.js    # GET /api/quiz/[sessionId]/summary
 └── canva/
     ├── generate/route.js       # POST /api/canva/generate
-    ├── [presentationId]/
-    │   ├── status/route.js     # GET /api/canva/[presentationId]/status
-    │   └── link/route.js       # GET /api/canva/[presentationId]/link
+    └── [presentationId]/
+        ├── status/route.js     # GET /api/canva/[presentationId]/status
+        └── link/route.js       # GET /api/canva/[presentationId]/link
 ```
 
 ### Services (`backend/lib/services/`)
@@ -112,75 +112,54 @@ backend/
 └── package.json                # Dependencies and scripts
 ```
 
-### Documentation (`backend/`)
-
-```
-backend/
-├── README.md                   # Backend overview and quick start
-├── ENV_SETUP.md                # Detailed environment setup guide
-├── QUICK_START.md              # Quick start guide
-├── SETUP_CHECKLIST.md          # Setup verification checklist
-├── FIREBASE_SETUP.md           # Firebase configuration guide
-├── FIRESTORE_ARCHITECTURE.md   # Firestore schema documentation
-├── VERCEL_DEPLOYMENT.md        # Vercel deployment guide
-└── [other documentation]       # Additional guides and references
-```
-
 ## Frontend Structure (`frontend/`)
 
 ### Source Code (`frontend/src/`)
 
 ```
 frontend/src/
-├── App.js                      # Root component
-├── index.js                    # Entry point
+├── App.jsx                     # Root component with routing
+├── index.css                   # Global styles with Tailwind CSS
 ├── screens/                    # Screen components
-│   ├── AuthScreen.js           # Login screen
-│   ├── DashboardScreen.js      # Module list
-│   ├── ModuleDetailScreen.js   # Flashcard list
-│   ├── FlashcardEditorScreen.js # Edit flashcard
-│   ├── UploadImageScreen.js    # Scan notes
-│   ├── VoiceQuizScreen.js      # Voice quiz session
-│   ├── ImageQuizScreen.js      # Image quiz session
-│   ├── QuizResultsScreen.js    # Quiz summary
-│   └── SettingsScreen.js       # User preferences
-├── components/                 # Reusable components
-│   ├── Button.js               # Button component
-│   ├── Card.js                 # Card component
-│   ├── Input.js                # Text input component
-│   ├── Badge.js                # Score badge
-│   ├── Spinner.js              # Loading spinner
-│   ├── Modal.js                # Modal dialog
-│   └── [other components]      # Additional UI components
+│   ├── AuthScreen.jsx          # Login screen with Civic.ai OAuth
+│   ├── DashboardScreen.jsx     # Module list and overview stats
+│   ├── ModuleDetailScreen.jsx  # Flashcard list with expand/collapse
+│   ├── UploadImageScreen.jsx   # Drag & drop image upload
+│   ├── VoiceQuizScreen.jsx     # Voice-based quiz session
+│   ├── ImageQuizScreen.jsx     # Image quiz (MCQ, free recall, fill-in-blank)
+│   ├── QuizResultsScreen.jsx   # Quiz summary and score breakdown
+│   └── SettingsScreen.jsx      # User preferences
+├── components/
+│   └── ui/                     # shadcn/ui components
+│       ├── button.jsx          # Button with variants
+│       ├── card.jsx            # Card, CardHeader, CardTitle, CardContent
+│       ├── badge.jsx           # Score badges (success, warning, error)
+│       ├── progress.jsx        # Progress bars
+│       ├── spinner.jsx         # Loading spinner
+│       ├── input.jsx           # Form inputs
+│       └── textarea.jsx        # Multi-line text inputs
 ├── services/                   # Client-side services
 │   ├── apiClient.js            # HTTP client for API calls
 │   ├── authService.js          # Authentication client
-│   ├── storageService.js       # Local storage utilities
-│   └── [other services]        # Additional client services
+│   ├── moduleService.js        # Module API calls
+│   ├── flashcardService.js     # Flashcard API calls
+│   ├── quizService.js          # Quiz session API calls
+│   ├── speechService.js        # Speech token API
+│   └── canvaService.js         # Canva presentation API
 ├── hooks/                      # Custom React hooks
-│   ├── useAuth.js              # Authentication hook
-│   ├── useQuiz.js              # Quiz state hook
-│   └── [other hooks]           # Additional hooks
-├── utils/                      # Utility functions
-│   ├── formatters.js           # Text formatting
-│   ├── validators.js           # Input validation
-│   └── [other utilities]       # Additional utilities
-├── styles/                     # Global and component styles
-│   ├── globals.css             # Global styles
-│   └── theme.css               # Theme variables
-└── constants/                  # Application constants
-    ├── api.js                  # API endpoints
-    ├── messages.js             # UI messages and strings
-    └── config.js               # App configuration
+│   ├── useAuth.js              # Authentication state and actions
+│   └── useQuiz.js              # Quiz state management
+└── lib/
+    └── utils.js                # Utility functions (cn for class merging)
 ```
 
 ### Configuration (`frontend/`)
 
 ```
 frontend/
-├── webpack.config.js           # Webpack build configuration
-├── .babelrc.js                 # Babel transpiler configuration
-├── tamagui.config.js           # Tamagui theme and design tokens
+├── vite.config.js              # Vite build configuration with path aliases
+├── tailwind.config.js          # Tailwind CSS theme and custom colors
+├── vercel.json                 # Vercel deployment configuration
 ├── package.json                # Dependencies and scripts
 └── .gitignore                  # Git ignore rules
 ```
@@ -189,7 +168,7 @@ frontend/
 
 ```
 frontend/public/
-├── index.html                  # HTML template
+├── index.html                  # HTML template with Tailwind CDN
 ├── favicon.ico                 # Favicon
 └── [other static assets]       # Images, fonts, etc.
 ```
@@ -200,8 +179,7 @@ frontend/public/
 .kiro/specs/ai-flashcard-quizzer/
 ├── requirements.md             # Feature requirements and acceptance criteria
 ├── design.md                   # System architecture and design decisions
-├── tasks.md                    # Implementation task list with dependencies
-└── .config.kiro                # Spec metadata (auto-generated)
+└── tasks.md                    # Implementation task list with dependencies
 ```
 
 ## Key Conventions
@@ -209,9 +187,9 @@ frontend/public/
 ### File Naming
 
 - **API routes**: `route.js` (Next.js convention)
-- **Components**: PascalCase (e.g., `AuthScreen.js`, `Button.js`)
+- **Components**: PascalCase (e.g., `AuthScreen.jsx`, `Button.jsx`)
 - **Services**: camelCase with "Service" suffix (e.g., `authService.js`)
-- **Utilities**: camelCase (e.g., `formatters.js`)
+- **Utilities**: camelCase (e.g., `utils.js`)
 - **Hooks**: camelCase with "use" prefix (e.g., `useAuth.js`)
 - **Constants**: camelCase (e.g., `api.js`)
 
@@ -223,9 +201,28 @@ frontend/public/
 
 ### Import Paths
 
-- Relative imports for same directory: `./Component.js`
+- Relative imports for same directory: `./Component.jsx`
 - Relative imports for parent: `../services/authService.js`
-- Absolute imports from root: `@/screens/AuthScreen.js` (if configured)
+- Absolute imports from root: `@/screens/AuthScreen` (configured in vite.config.js)
+
+### Component Patterns
+
+**shadcn/ui Components**:
+```jsx
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+
+<Button variant="default" size="lg">
+  Click me
+</Button>
+```
+
+**Tailwind Styling**:
+```jsx
+<div className="flex items-center gap-4 p-6 bg-white rounded-2xl border border-border shadow-sm">
+  <span className="text-text-primary font-semibold">Content</span>
+</div>
+```
 
 ## Development Workflow
 
@@ -235,16 +232,16 @@ frontend/public/
 2. Create API route in `backend/app/api/`
 3. Create service in `backend/lib/services/`
 4. Create screen in `frontend/src/screens/`
-5. Create components in `frontend/src/components/`
-6. Add tests alongside implementation
+5. Create reusable components in `frontend/src/components/ui/`
+6. Add hooks in `frontend/src/hooks/` if needed
 7. Update documentation
 
 ### File Dependencies
 
 ```
-Frontend Screen
+Frontend Screen (screens/*.jsx)
     ↓
-API Client (frontend/src/services/apiClient.js)
+API Client (services/apiClient.js)
     ↓
 API Route (backend/app/api/*/route.js)
     ↓
@@ -262,9 +259,10 @@ Firebase/External APIs
 ## Important Notes
 
 - **No TypeScript**: This project uses JavaScript only
-- **ES Modules (backend)**: Use `import/export` syntax
-- **CommonJS (frontend)**: Use `require/module.exports` syntax
-- **Environment variables**: Backend uses `.env.local`, frontend uses `NEXT_PUBLIC_*` prefix for client-side vars
+- **ES Modules**: Both frontend and backend use `import/export` syntax
+- **Tailwind CSS**: All styling via utility classes - no custom CSS files
+- **shadcn/ui**: Copy-paste components - no bundled dependencies
+- **Environment variables**: Backend uses `.env.local`, frontend uses `VITE_` prefix
 - **Firestore collections**: Lowercase names (e.g., `users`, `modules`, `flashcards`)
 - **API versioning**: Not currently used; consider adding if needed
 - **Monorepo**: Backend and frontend are separate npm projects in same repo
@@ -275,11 +273,12 @@ Firebase/External APIs
 |------|----------|
 | Add API endpoint | `backend/app/api/*/route.js` |
 | Add business logic | `backend/lib/services/*.js` |
-| Add UI screen | `frontend/src/screens/*.js` |
-| Add reusable component | `frontend/src/components/*.js` |
-| Add utility function | `frontend/src/utils/*.js` or `backend/lib/utils/*.js` |
-| Configure environment | `backend/.env.local` |
-| Update theme | `frontend/tamagui.config.js` |
+| Add UI screen | `frontend/src/screens/*.jsx` |
+| Add reusable component | `frontend/src/components/ui/*.jsx` |
+| Add custom hook | `frontend/src/hooks/*.js` |
+| Add utility function | `frontend/src/lib/utils.js` |
+| Configure environment | `backend/.env.local` or `frontend/.env` |
+| Update theme | `frontend/tailwind.config.js` or inline Tailwind config |
 | Add Firestore collection | `backend/lib/firebase/firestore.js` |
 | Write tests | `*.test.js` alongside source |
 | Update documentation | `backend/*.md` or `frontend/README.md` |
