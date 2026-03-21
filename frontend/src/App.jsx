@@ -53,7 +53,11 @@ function AppContent() {
     setQuizSummary(null)
   }, [])
 
-  if (isLoading) {
+  // Only show the global loading screen on first load (no user yet).
+  // If we already have a user and Civic does a background token refresh,
+  // isLoading briefly flips true — don't unmount the active screen (especially
+  // VoiceQuizScreen which holds a live WebSocket).
+  if (isLoading && !user) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white gap-4">
         <div className="w-12 h-12 border-[3px] border-border border-t-primary rounded-full animate-spin" />

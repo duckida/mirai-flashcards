@@ -124,7 +124,11 @@ export default function VoiceQuizScreen({ moduleId, moduleName, flashcard, userI
     // Task 5.3: Mark as user-initiated before ending
     userEndedRef.current = true
     if (conversationRef.current) {
-      await conversationRef.current.endSession()
+      try {
+        await conversationRef.current.endSession()
+      } catch (_) {
+        // Already closed — safe to ignore
+      }
       conversationRef.current = null
     }
     startedRef.current = false
@@ -146,18 +150,39 @@ export default function VoiceQuizScreen({ moduleId, moduleName, flashcard, userI
     await finalizeSession()
   }, [finalizeSession])
 
-  // Task 2.4: Trigger on flashcard alone (removed module dependency)
+  // Task 2.4: Trigger on flashcard alone (removed module dependency).
+  // Use a mounted guard so React StrictMode's double-invoke of effects
+  // (which runs cleanup then re-runs the effect) doesn't fire two sessions
+  // or try to close a socket that was already torn down.
   useEffect(() => {
+    let cancelled = false
     if (flashcard && !startedRef.current) {
-      startVoiceSession()
+      // Small defer so that if StrictMode immediately runs cleanup first,
+      // the cancelled flag is set before startVoiceSession does any async work.
+      const id = setTimeout(() => {
+        if (!cancelled) startVoiceSession()
+      }, 0)
+      return () => {
+        cancelled = true
+        clearTimeout(id)
+      }
     }
   }, [flashcard, startVoiceSession])
 
   useEffect(() => {
     return () => {
-      if (conversationRef.current) {
-        conversationRef.current.endSession()
+      // Guard: only call endSession if the WebSocket is still open.
+      // conversationRef.current.endSession() throws if the socket is already
+      // CLOSING/CLOSED (e.g. after a StrictMode cleanup or Civic auth re-render).
+      const conv = conversationRef.current
+      if (conv) {
         conversationRef.current = null
+        startedRef.current = false
+        try {
+          conv.endSession()
+        } catch (_) {
+          // Already closed — safe to ignore
+        }
       }
     }
   }, [])
