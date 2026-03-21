@@ -382,9 +382,15 @@ function ImageQuizScreen({ moduleId, onBack, onNavigate, screens }) {
   }, [reset, onNavigate, screens, moduleId, onBack]);
 
   const handleReviewWeak = useCallback(async () => {
-    // Navigate back to module with focus on weak cards
-    handleReturnToModule();
-  }, [handleReturnToModule]);
+    reset();
+    if (onNavigate && screens?.MODULE_DETAIL) {
+      onNavigate(screens.MODULE_DETAIL, moduleId, { reviewWeak: true });
+    } else if (onNavigate) {
+      onNavigate('module_detail', moduleId, { reviewWeak: true });
+    } else if (onBack) {
+      onBack();
+    }
+  }, [reset, onNavigate, screens, moduleId, onBack]);
 
   // Show results when quiz is complete
   if (summary || isComplete) {

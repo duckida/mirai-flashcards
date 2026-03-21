@@ -304,8 +304,16 @@ function NewFlashcardForm({ moduleId, userId, onSave, onCancel }) {
   );
 }
 
-function ModuleDetailScreen({ moduleId, onBack, onNavigate, screens }) {
+function ModuleDetailScreen({ moduleId, onBack, onNavigate, screens, reviewWeak }) {
   const { user } = useAuth();
+  const [filterWeak, setFilterWeak] = useState(reviewWeak || false);
+
+  // Sync filterWeak with reviewWeak prop
+  useEffect(() => {
+    if (reviewWeak) {
+      setFilterWeak(true);
+    }
+  }, [reviewWeak]);
 
   const handleStartVoiceQuiz = useCallback(() => {
     if (onNavigate && screens?.VOICE_QUIZ) {
@@ -420,6 +428,9 @@ function ModuleDetailScreen({ moduleId, onBack, onNavigate, screens }) {
       ? Math.round(flashcards.reduce((sum, card) => sum + (card.knowledgeScore || 0), 0) / flashcards.length)
       : 0;
 
+  const weakCards = flashcards.filter(card => (card.knowledgeScore || 0) < 40);
+  const displayedFlashcards = filterWeak ? weakCards : flashcards;
+
   const scoreColor =
     aggregateScore >= 70 ? '$success' : aggregateScore >= 40 ? '$warning' : '$error';
 
@@ -469,7 +480,7 @@ function ModuleDetailScreen({ moduleId, onBack, onNavigate, screens }) {
         </Button>
       </XStack>
 
-      {/* Error Banner */}
+        {/* Error Banner */}
       {error && (
         <Card backgroundColor="$errorBackground" borderColor="$error" borderWidth={1} padding="$3" marginBottom="$4">
           <XStack justifyContent="space-between" alignItems="center">
@@ -481,6 +492,25 @@ function ModuleDetailScreen({ moduleId, onBack, onNavigate, screens }) {
             </Button>
           </XStack>
         </Card>
+      )}
+
+      {/* Filter Toggle */}
+      {weakCards.length > 0 && (
+        <XStack gap="$2" marginBottom="$3">
+          <Button
+            size="$2"
+            variant={filterWeak ? 'solid' : 'outlined'}
+            theme={filterWeak ? 'orange' : undefined}
+            onPress={() => setFilterWeak(!filterWeak)}
+          >
+            {filterWeak ? `Showing ${weakCards.length} Weak Cards` : `Show ${weakCards.length} Weak Cards`}
+          </Button>
+          {filterWeak && (
+            <Button size="$2" variant="outlined" onPress={() => setFilterWeak(false)}>
+              Show All ({flashcards.length})
+            </Button>
+          )}
+        </XStack>
       )}
 
       {/* Aggregate Score Card */}
@@ -531,19 +561,27 @@ function ModuleDetailScreen({ moduleId, onBack, onNavigate, screens }) {
               onCancel={() => setShowNewForm(false)}
             />
           )}
-          {flashcards.length === 0 && !showNewForm ? (
+          {displayedFlashcards.length === 0 && !showNewForm ? (
             <Card padding="$8" backgroundColor="$backgroundHover" borderRadius="$4" alignItems="center">
               <YStack alignItems="center" gap="$3">
                 <Text fontSize="$3" color="$textTertiary" textAlign="center">
-                  No flashcards in this module yet.
+                  {filterWeak
+                    ? 'No weak cards found. All cards have a knowledge score of 40% or higher!'
+                    : 'No flashcards in this module yet.'}
                 </Text>
-                <Button size="$3" theme="purple" onPress={() => setShowNewForm(true)}>
-                  Add Your First Card
-                </Button>
+                {filterWeak ? (
+                  <Button size="$3" theme="purple" onPress={() => setFilterWeak(false)}>
+                    Show All Cards
+                  </Button>
+                ) : (
+                  <Button size="$3" theme="purple" onPress={() => setShowNewForm(true)}>
+                    Add Your First Card
+                  </Button>
+                )}
               </YStack>
             </Card>
           ) : (
-            flashcards.map((card) =>
+            displayedFlashcards.map((card) =>
               editingCardId === card.id ? (
                 <FlashcardEditorModal
                   key={card.id}

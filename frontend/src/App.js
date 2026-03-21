@@ -22,17 +22,24 @@ function AppContent() {
   const { isLoading, isAuthenticated } = useAuth()
   const [currentScreen, setCurrentScreen] = useState(SCREENS.DASHBOARD)
   const [selectedModuleId, setSelectedModuleId] = useState(null)
+  const [reviewWeak, setReviewWeak] = useState(false)
 
-  const navigateTo = useCallback((screen, moduleId) => {
+  const navigateTo = useCallback((screen, moduleId, options) => {
     setCurrentScreen(screen)
     if (moduleId) {
       setSelectedModuleId(moduleId)
+    }
+    if (options?.reviewWeak) {
+      setReviewWeak(true)
+    } else {
+      setReviewWeak(false)
     }
   }, [])
 
   const goBack = useCallback(() => {
     setCurrentScreen(SCREENS.DASHBOARD)
     setSelectedModuleId(null)
+    setReviewWeak(false)
   }, [])
 
   if (isLoading) {
@@ -88,6 +95,7 @@ function AppContent() {
         onBack={goBack}
         onNavigate={navigateTo}
         screens={SCREENS}
+        reviewWeak={reviewWeak}
       />
     )
   }

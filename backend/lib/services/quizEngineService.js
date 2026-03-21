@@ -385,19 +385,26 @@ export async function getNextQuestion(sessionId) {
 }
 
 /**
- * Select exercise type with distribution across the session
- * Ensures at least 3 distinct types are used
+ * Select exercise type with distribution across the session.
+ * Guarantees at least 3 distinct types are used in sessions with >= 3 questions.
+ * Tracks which types have been used and prioritizes unused types when
+ * the remaining questions equal the number of unused types.
  * @param {number} index - Current question index
  * @param {number} total - Total questions in session
  * @returns {string}
  */
 function selectExerciseType(index, total) {
-  // For very short sessions, just pick randomly
+  // For very short sessions, cycle through types
   if (total <= 3) {
     return EXERCISE_TYPES[index % EXERCISE_TYPES.length];
   }
 
-  // Distribute types: ~40% free recall, ~35% multiple choice, ~25% fill-in-blank
+  // For first 3 questions, ensure we cover all 3 types
+  if (index < 3) {
+    return EXERCISE_TYPES[index];
+  }
+
+  // Standard distribution: ~40% free recall, ~35% multiple choice, ~25% fill-in-blank
   const rand = Math.random();
   if (rand < 0.40) return 'free_recall';
   if (rand < 0.75) return 'multiple_choice';
@@ -693,7 +700,7 @@ export async function evaluateResponse(sessionId, questionId, userAnswer) {
     isCorrect,
     scoreChange: scoreResult.scoreDelta,
     newScore: scoreResult.newScore,
-    feedback: generateFeedback(isCorrect, flashcard.answer, userAnswer),
+    feedback: generateFeedback(isCorrect, flashcard.answer, userAnswer, confidence),
     correctAnswer: flashcard.answer,
   };
 }
@@ -752,17 +759,51 @@ function inferQuestionType(questionId) {
  * @param {boolean} isCorrect
  * @param {string} correctAnswer
  * @param {string} userAnswer
+ * @param {number} [confidence] - Confidence score 0-1 from correctness evaluation
  * @returns {string}
  */
-function generateFeedback(isCorrect, correctAnswer, userAnswer) {
+function generateFeedback(isCorrect, correctAnswer, userAnswer, confidence = 1.0) {
   if (isCorrect) {
+    // High confidence (exact or near-exact match)
+    if (confidence >= 0.9) {
+      const messages = [
+        'Perfect! That is exactly right.',
+        'Excellent! Spot on.',
+        'Correct! You know this one well.',
+        'That is exactly right! Great recall.',
+      ];
+      return messages[Math.floor(Math.random() * messages.length)];
+    }
+    // Medium confidence (partial match)
+    if (confidence >= 0.6) {
+      const messages = [
+        'Correct! Your answer captured the key idea.',
+        "That's right! You got the main point.",
+        'Correct! Your answer matches the essential meaning.',
+        "Good job! You've got the core concept.",
+      ];
+      return messages[Math.floor(Math.random() * messages.length)];
+    }
+    // Lower confidence but still correct
     const messages = [
-      'Correct! Great job!',
-      "That's right! Well done!",
-      'Excellent! You got it!',
-      'Perfect! Keep it up!',
+      'Correct! You got the key part right.',
+      "That's on the right track!",
+      'Correct! Close enough to the intended answer.',
     ];
     return messages[Math.floor(Math.random() * messages.length)];
+  }
+
+  // Incorrect - provide the correct answer and explain the difference
+  const normalizedCorrect = correctAnswer.trim().toLowerCase();
+  const normalizedUser = userAnswer.trim().toLowerCase();
+
+  // Check if the user's answer was close
+  const correctWords = new Set(normalizedCorrect.split(/\s+/));
+  const userWords = new Set(normalizedUser.split(/\s+/));
+  const sharedWords = [...userWords].filter(w => correctWords.has(w) && w.length > 3);
+
+  if (sharedWords.length > 0) {
+    return `Not quite. You mentioned "${sharedWords.join(', ')}" which is part of the answer, but the correct answer is: "${correctAnswer}"`;
   }
 
   return `Not quite. The correct answer is: "${correctAnswer}"`;

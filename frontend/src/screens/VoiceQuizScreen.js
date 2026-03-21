@@ -1,16 +1,16 @@
 /**
  * Voice Quiz Session Screen
  *
- * Voice-based quiz session. Currently uses text-based interaction
- * as a foundation. Will be enhanced with ElevenLabs speech
- * integration in Phase 8.
+ * Voice-based quiz session using ElevenLabs for speech recognition and synthesis.
  */
 
 const React = require('react');
-const { useState, useEffect, useCallback } = React;
+const { useState, useEffect, useCallback, useRef } = React;
 const { YStack, XStack, Text, Button, Card, Spinner, ScrollView, Input } = require('@tamagui/core');
 const useAuth = require('../hooks/useAuth');
 const useQuiz = require('../hooks/useQuiz');
+const useSpeech = require('../hooks/useSpeech');
+const speechService = require('../services/speechService');
 const QuizResultsScreen = require('./QuizResultsScreen');
 const moduleService = require('../services/moduleService');
 
@@ -32,12 +32,28 @@ function VoiceQuizScreen({ moduleId, onBack, onNavigate, screens }) {
     reset,
     setError,
   } = useQuiz();
+  const {
+    isConnected,
+    isSpeaking,
+    isListening,
+    transcript,
+    agentMessage,
+    status,
+    error: speechError,
+    startConversation,
+    stopConversation,
+    sendContextualUpdate,
+    sendUserMessage,
+  } = useSpeech();
 
   const [module, setModule] = useState(null);
   const [flashcards, setFlashcards] = useState([]);
   const [userAnswer, setUserAnswer] = useState('');
   const [isAnswered, setIsAnswered] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [isMicPermissionRequested, setIsMicPermissionRequested] = useState(false);
+  const [latencyStartTime, setLatencyStartTime] = useState(null);
+  const conversationIdRef = useRef(null);
 
   // Fetch module data
   useEffect(() => {
@@ -70,8 +86,73 @@ function VoiceQuizScreen({ moduleId, onBack, onNavigate, screens }) {
       setUserAnswer('');
       setIsAnswered(false);
       setShowAnswer(false);
+      
+      // Send contextual update for new question
+      if (isConnected) {
+        setLatencyStartTime(Date.now());
+        const contextText = `Question: ${currentQuestion.question}`;
+        sendContextualUpdate(contextText);
+      }
     }
-  }, [currentQuestion?.id]);
+  }, [currentQuestion?.id, isConnected, sendContextualUpdate]);
+
+  // Handle speech connection when quiz starts
+  useEffect(() => {
+    if (user?.id && moduleId && session && !isConnected && status === 'idle') {
+      initializeSpeechConnection();
+    }
+  }, [user, moduleId, session, isConnected, status]);
+
+  // Handle transcript updates (when user finishes speaking)
+  useEffect(() => {
+    if (transcript && !isAnswered && isListening === false) {
+      // Auto-populate answer field with transcript
+      setUserAnswer(transcript);
+      
+      // Optionally auto-submit after a short delay
+      // setTimeout(() => {
+      //   if (userAnswer && !isAnswered) {
+      //     handleSubmit();
+      //   }
+      // }, 1500);
+    }
+  }, [transcript, isAnswered, isListening]);
+
+  // Handle agent messages (when AI speaks)
+  useEffect(() => {
+    if (agentMessage) {
+      // Reset local answer input when agent starts speaking
+      setUserAnswer('');
+    }
+  }, [agentMessage]);
+
+  const initializeSpeechConnection = async () => {
+    try {
+      // Get signed URL from backend
+      const signedUrl = await speechService.getSignedUrl();
+      
+      // Build session overrides for quiz context
+      const overrides = SpeechService.buildSessionOverrides(
+        module?.name || 'Unknown Module',
+        user?.name || 'User'
+      );
+      
+      // Start conversation
+      const success = await startConversation(signedUrl, overrides);
+      if (success) {
+        // Send initial context with user info
+        const context = SpeechService.buildConversationContext(
+          session,
+          flashcards,
+          user
+        );
+        sendContextualUpdate(JSON.stringify(context));
+      }
+    } catch (err) {
+      console.error('Failed to initialize speech connection:', err);
+      setError('Speech connection failed. Falling back to text mode.');
+    }
+  };
 
   const handleSubmit = useCallback(async () => {
     if (!currentQuestion) return;
@@ -81,22 +162,54 @@ function VoiceQuizScreen({ moduleId, onBack, onNavigate, screens }) {
       return;
     }
 
+    // Calculate latency if we tracked it
+    if (latencyStartTime) {
+      const latency = Date.now() - latencyStartTime;
+      console.log(`Speech latency: ${latency}ms`);
+      if (latency > 1000) {
+        console.warn(`High speech latency detected: ${latency}ms`);
+      }
+      setLatencyStartTime(null);
+    }
+
     const result = await submitAnswer(userAnswer);
     if (result) {
       setIsAnswered(true);
+      
+      // Send feedback to agent
+      if (isConnected) {
+        const feedbackText = feedback.isCorrect 
+          ? `Correct! ${feedback.feedback}` 
+          : `Incorrect. ${feedback.feedback} The correct answer is ${feedback.correctAnswer}`;
+        sendContextualUpdate(feedbackText);
+      }
     }
-  }, [currentQuestion, userAnswer, submitAnswer, setError]);
+  }, [currentQuestion, userAnswer, submitAnswer, setError, feedback, isConnected, sendContextualUpdate, latencyStartTime]);
 
   const handleNext = useCallback(async () => {
     await nextQuestion();
   }, [nextQuestion]);
 
   const handleEndQuiz = useCallback(async () => {
+    if (isConnected) {
+      // Send session summary to agent
+      const summaryText = `Quiz complete! You scored ${progress.correct} out of ${progress.total} questions.`;
+      sendContextualUpdate(summaryText);
+      
+      // Give a moment for the agent to speak before disconnecting
+      setTimeout(() => {
+        stopConversation();
+      }, 2000);
+    } else {
+      stopConversation();
+    }
+    
     await endQuiz();
-  }, [endQuiz]);
+  }, [endQuiz, isConnected, sendContextualUpdate, stopConversation, progress]);
 
   const handleReturnToModule = useCallback(() => {
     reset();
+    stopConversation();
     if (onNavigate && screens?.MODULE_DETAIL) {
       onNavigate(screens.MODULE_DETAIL, moduleId);
     } else if (onNavigate) {
@@ -104,11 +217,30 @@ function VoiceQuizScreen({ moduleId, onBack, onNavigate, screens }) {
     } else if (onBack) {
       onBack();
     }
-  }, [reset, onNavigate, screens, moduleId, onBack]);
+  }, [reset, onNavigate, screens, moduleId, onBack, stopConversation]);
 
   const handleReviewWeak = useCallback(async () => {
-    handleReturnToModule();
-  }, [handleReturnToModule]);
+    reset();
+    stopConversation();
+    if (onNavigate && screens?.MODULE_DETAIL) {
+      onNavigate(screens.MODULE_DETAIL, moduleId, { reviewWeak: true });
+    } else if (onNavigate) {
+      onNavigate('module_detail', moduleId, { reviewWeak: true });
+    } else if (onBack) {
+      onBack();
+    }
+  }, [reset, stopConversation, onNavigate, screens, moduleId, onBack]);
+
+  const requestMicPermission = useCallback(async () => {
+    setIsMicPermissionRequested(true);
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      return true;
+    } catch (err) {
+      console.error('Microphone permission denied:', err);
+      return false;
+    }
+  }, []);
 
   // Show results when quiz is complete
   if (summary || isComplete) {
@@ -186,6 +318,27 @@ function VoiceQuizScreen({ moduleId, onBack, onNavigate, screens }) {
 
   const canSubmit = userAnswer.trim() !== '';
 
+  // Determine microphone indicator color and animation
+  let micBackgroundColor = '$primary';
+  let micIcon = 'Q';
+  
+  if (isLoading) {
+    micBackgroundColor = '$warning';
+    micIcon = '...';
+  } else if (status === 'error' || speechError) {
+    micBackgroundColor = '$error';
+    micIcon = '!';
+  } else if (isSpeaking) {
+    micBackgroundColor = '$blue'; // or '$purple' depending on your theme
+    micIcon = '🔊';
+  } else if (isListening) {
+    micBackgroundColor = '$success';
+    micIcon = '🎤';
+  } else if (!isConnected && !isMicPermissionRequested) {
+    micBackgroundColor = '$backgroundHover';
+    micIcon = '🎤';
+  }
+
   return (
     <YStack flex={1} padding="$4" backgroundColor="$background">
       {/* Header */}
@@ -235,12 +388,48 @@ function VoiceQuizScreen({ moduleId, onBack, onNavigate, screens }) {
         </XStack>
       </XStack>
 
-      {/* Error Banner */}
-      {error && (
+      {/* Speech Error Banner */}
+      {(status === 'error' || speechError) && !isConnected && (
         <Card backgroundColor="$errorBackground" borderColor="$error" borderWidth={1} padding="$3" marginBottom="$3">
           <XStack justifyContent="space-between" alignItems="center">
-            <Text fontSize="$2" color="$error" flex={1}>{error}</Text>
-            <Button size="$1" variant="outlined" onPress={() => setError(null)}>Dismiss</Button>
+            <Text fontSize="$2" color="$error" flex={1}>
+              {speechError || 'Speech connection error'}
+            </Text>
+            <XStack gap="$2">
+              {!isMicPermissionRequested && (
+                <Button size="$2" onPress={requestMicPermission}>
+                  Enable Microphone
+                </Button>
+              )}
+              <Button size="$2" variant="outlined" onPress={() => {
+                // Reset error and try to reconnect
+                stopConversation();
+                setError(null);
+              }}>
+                Retry
+              </Button>
+              <Button size="$2" theme="purple" onPress={() => {
+                setError(null);
+                // Switch to text-only mode by ending speech
+                stopConversation();
+              }}>
+                Text Mode
+              </Button>
+            </XStack>
+          </XStack>
+        </Card>
+      )}
+
+      {/* Mic Permission Banner */}
+      {isMicPermissionRequested && !isConnected && !status.includes('connected') && (
+        <Card backgroundColor="$warning" borderColor="$warning" borderWidth={1} padding="$3" marginBottom="$3">
+          <XStack justifyContent="space-between" alignItems="center">
+            <Text fontSize="$2" color="$warning" flex={1}>
+              Microphone permission denied. Please enable microphone access in browser settings for voice quiz.
+            </Text>
+            <Button size="$2" variant="outlined" onPress={() => setIsMicPermissionRequested(false)}>
+              Got it
+            </Button>
           </XStack>
         </Card>
       )}
@@ -248,23 +437,29 @@ function VoiceQuizScreen({ moduleId, onBack, onNavigate, screens }) {
       <ScrollView flex={1}>
         <Card elevate padding="$5" backgroundColor="$cardBackground" borderColor="$borderColor">
           <YStack gap="$4" alignItems="center">
-            {/* Microphone indicator placeholder */}
+            {/* Microphone indicator */}
             <YStack
               width={80}
               height={80}
               borderRadius={40}
-              backgroundColor={isLoading ? '$warning' : '$primary'}
+              backgroundColor={micBackgroundColor}
               alignItems="center"
               justifyContent="center"
             >
               <Text fontSize="$6" color="white">
-                {isLoading ? '...' : 'Q'}
+                {micIcon}
               </Text>
             </YStack>
 
             <Text fontSize="$2" color="$textSecondary">
-              {/* Will be replaced with actual speech status in Phase 8 */}
-              Text-based mode
+              {/* Dynamic speech status */}
+              {status === 'connecting' ? 'Connecting...' :
+               status === 'connected' && !isSpeaking && !isListening ? 'Listening...' :
+               isSpeaking ? 'AI is speaking...' :
+               isListening ? 'Listening to your answer...' :
+               status === 'error' ? 'Connection error' :
+               !isConnected && !isMicPermissionRequested ? 'Tap microphone to start' :
+               'Ready'}
             </Text>
 
             {/* Question */}
@@ -307,7 +502,7 @@ function VoiceQuizScreen({ moduleId, onBack, onNavigate, screens }) {
                 <Input
                   value={userAnswer}
                   onChangeText={setUserAnswer}
-                  placeholder="Type your answer..."
+                  placeholder="Type your answer or speak now..."
                   padding="$3"
                   fontSize="$3"
                   backgroundColor="$background"
@@ -375,5 +570,39 @@ function VoiceQuizScreen({ moduleId, onBack, onNavigate, screens }) {
     </YStack>
   );
 }
+
+// Static class for speech service helpers (since we can't import backend service directly in frontend)
+const SpeechService = {
+  buildConversationContext(session, flashcards, user) {
+    const currentQuestionIndex = session.currentQuestionIndex || 0;
+    const currentFlashcard = flashcards[currentQuestionIndex];
+    
+    return {
+      user_id: user.id,
+      user_name: user.name || 'User',
+      session_id: session.id,
+      module_name: session.moduleName || 'Unknown Module',
+      current_question_index: currentQuestionIndex,
+      total_questions: session.questionCount || flashcards.length,
+      current_question: currentFlashcard ? currentFlashcard.question : null,
+      correct_answer: currentFlashcard ? currentFlashcard.answer : null,
+      score_correct: session.score?.correct || 0,
+      score_incorrect: session.score?.incorrect || 0,
+      is_complete: session.isComplete || false,
+      feedback: session.lastFeedback || null,
+    };
+  },
+
+  buildSessionOverrides(moduleName, userName) {
+    return {
+      agent: {
+        prompt: {
+          prompt: `You are a helpful quiz assistant for the "${moduleName}" module. Greet the user by name (${userName}) and help them study by asking questions from their flashcards. Read questions clearly, wait for their responses, and provide encouraging feedback. Keep your responses concise and focused on the quiz.`,
+        },
+        first_message: `Hello ${userName}! I'm your quiz assistant for ${moduleName}. Let's start studying!`,
+      },
+    };
+  }
+};
 
 module.exports = VoiceQuizScreen;
