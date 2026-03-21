@@ -13,6 +13,10 @@ const moduleService = require('../services/moduleService');
 const flashcardService = require('../services/flashcardService');
 const apiClient = require('../services/apiClient');
 const { requestPresentation } = require('../services/canvaService');
+const { getScoreColor } = require('../components/ScoreBadge');
+const ProgressBar = require('../components/ProgressBar');
+const PresentationModal = require('../components/PresentationModal');
+const FlashcardForm = require('../components/FlashcardForm');
 
 function FlashcardCard({ flashcard, onEdit, onDelete, onToggle, isExpanded }) {
   const score = flashcard.knowledgeScore || 0;
@@ -133,177 +137,8 @@ function FlashcardCard({ flashcard, onEdit, onDelete, onToggle, isExpanded }) {
   );
 }
 
-function FlashcardEditorModal({ flashcard, onSave, onCancel }) {
-  const [question, setQuestion] = useState(flashcard.question);
-  const [answer, setAnswer] = useState(flashcard.answer);
-  const [error, setError] = useState(null);
-
-  const handleSave = async () => {
-    if (!question.trim() || !answer.trim()) {
-      setError('Question and answer cannot be empty');
-      return;
-    }
-    setError(null);
-    await onSave(flashcard.id, { question: question.trim(), answer: answer.trim() });
-  };
-
-  return (
-    <Card elevate padding="$4" marginBottom="$3" backgroundColor="$cardBackground" borderColor="$primary" borderWidth={2}>
-      <YStack gap="$3">
-        <Text fontSize="$4" fontWeight="bold" color="$primary">
-          Edit Flashcard
-        </Text>
-
-        <YStack gap="$2">
-          <Text fontSize="$2" color="$textSecondary" fontWeight="600">
-            Question
-          </Text>
-          <Input
-            value={question}
-            onChangeText={setQuestion}
-            placeholder="Enter question"
-            multiline
-            numberOfLines={3}
-            padding="$3"
-            backgroundColor="$background"
-            borderColor={question.trim() ? '$borderColor' : '$error'}
-            borderWidth={1}
-            borderRadius="$3"
-          />
-        </YStack>
-
-        <YStack gap="$2">
-          <Text fontSize="$2" color="$textSecondary" fontWeight="600">
-            Answer
-          </Text>
-          <Input
-            value={answer}
-            onChangeText={setAnswer}
-            placeholder="Enter answer"
-            multiline
-            numberOfLines={3}
-            padding="$3"
-            backgroundColor="$background"
-            borderColor={answer.trim() ? '$borderColor' : '$error'}
-            borderWidth={1}
-            borderRadius="$3"
-          />
-        </YStack>
-
-        {error && (
-          <Text fontSize="$2" color="$error">
-            {error}
-          </Text>
-        )}
-
-        <XStack gap="$2" justifyContent="flex-end">
-          <Button size="$3" variant="outlined" onPress={onCancel}>
-            Cancel
-          </Button>
-          <Button
-            size="$3"
-            theme="purple"
-            onPress={handleSave}
-            disabled={!question.trim() || !answer.trim()}
-            opacity={!question.trim() || !answer.trim() ? 0.5 : 1}
-          >
-            Save
-          </Button>
-        </XStack>
-      </YStack>
-    </Card>
-  );
-}
-
-function NewFlashcardForm({ moduleId, userId, onSave, onCancel }) {
-  const [question, setQuestion] = useState('');
-  const [answer, setAnswer] = useState('');
-  const [error, setError] = useState(null);
-  const [isSaving, setIsSaving] = useState(false);
-
-  const handleSave = async () => {
-    if (!question.trim() || !answer.trim()) {
-      setError('Question and answer cannot be empty');
-      return;
-    }
-    setError(null);
-    setIsSaving(true);
-    try {
-      await onSave({ question: question.trim(), answer: answer.trim() });
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  return (
-    <Card elevate padding="$4" marginBottom="$3" backgroundColor="$cardBackground" borderColor="$primary" borderWidth={2}>
-      <YStack gap="$3">
-        <Text fontSize="$4" fontWeight="bold" color="$primary">
-          New Flashcard
-        </Text>
-
-        <YStack gap="$2">
-          <Text fontSize="$2" color="$textSecondary" fontWeight="600">
-            Question
-          </Text>
-          <Input
-            value={question}
-            onChangeText={setQuestion}
-            placeholder="Enter question"
-            multiline
-            numberOfLines={3}
-            padding="$3"
-            backgroundColor="$background"
-            borderColor={question.trim() ? '$borderColor' : '$error'}
-            borderWidth={1}
-            borderRadius="$3"
-          />
-        </YStack>
-
-        <YStack gap="$2">
-          <Text fontSize="$2" color="$textSecondary" fontWeight="600">
-            Answer
-          </Text>
-          <Input
-            value={answer}
-            onChangeText={setAnswer}
-            placeholder="Enter answer"
-            multiline
-            numberOfLines={3}
-            padding="$3"
-            backgroundColor="$background"
-            borderColor={answer.trim() ? '$borderColor' : '$error'}
-            borderWidth={1}
-            borderRadius="$3"
-          />
-        </YStack>
-
-        {error && (
-          <Text fontSize="$2" color="$error">
-            {error}
-          </Text>
-        )}
-
-        <XStack gap="$2" justifyContent="flex-end">
-          <Button size="$3" variant="outlined" onPress={onCancel} disabled={isSaving}>
-            Cancel
-          </Button>
-          <Button
-            size="$3"
-            theme="purple"
-            onPress={handleSave}
-            disabled={!question.trim() || !answer.trim() || isSaving}
-            opacity={!question.trim() || !answer.trim() || isSaving ? 0.5 : 1}
-          >
-            {isSaving ? 'Saving...' : 'Save'}
-          </Button>
-        </XStack>
-      </YStack>
-    </Card>
-  );
-}
+// FlashcardEditorModal and NewFlashcardForm replaced by shared FlashcardForm component
+// Import FlashcardForm from components/FlashcardForm.js
 
 function ModuleDetailScreen({ moduleId, onBack, onNavigate, screens, reviewWeak }) {
   const { user } = useAuth();
@@ -576,9 +411,8 @@ function ModuleDetailScreen({ moduleId, onBack, onNavigate, screens, reviewWeak 
       <ScrollView flex={1}>
         <YStack>
           {showNewForm && (
-            <NewFlashcardForm
-              moduleId={moduleId}
-              userId={user?.id}
+            <FlashcardForm
+              mode="create"
               onSave={handleCreateFlashcard}
               onCancel={() => setShowNewForm(false)}
             />
@@ -605,10 +439,12 @@ function ModuleDetailScreen({ moduleId, onBack, onNavigate, screens, reviewWeak 
           ) : (
             displayedFlashcards.map((card) =>
               editingCardId === card.id ? (
-                <FlashcardEditorModal
+                <FlashcardForm
                   key={card.id}
-                  flashcard={card}
-                  onSave={handleSaveEdit}
+                  mode="edit"
+                  initialQuestion={card.question}
+                  initialAnswer={card.answer}
+                  onSave={(data) => handleSaveEdit(card.id, data)}
                   onCancel={() => setEditingCardId(null)}
                 />
               ) : (
@@ -633,20 +469,22 @@ function ModuleDetailScreen({ moduleId, onBack, onNavigate, screens, reviewWeak 
           minWidth={120}
           size="$3"
           theme="purple"
-          disabled={flashcards.length === 0 || isGeneratingPresentation}
+          disabled={flashcards.length === 0}
           opacity={flashcards.length === 0 ? 0.5 : 1}
           onPress={handleStartVoiceQuiz}
+          aria-label="Start voice quiz"
         >
-          {isGeneratingPresentation ? 'Generating...' : 'Voice Quiz'}
+          Voice Quiz
         </Button>
         <Button
           flex={1}
           minWidth={120}
           size="$3"
           theme="purple"
-          disabled={flashcards.length === 0 || isGeneratingPresentation}
+          disabled={flashcards.length === 0}
           opacity={flashcards.length === 0 ? 0.5 : 1}
           onPress={handleStartImageQuiz}
+          aria-label="Start image quiz"
         >
           Image Quiz
         </Button>
@@ -659,65 +497,22 @@ function ModuleDetailScreen({ moduleId, onBack, onNavigate, screens, reviewWeak 
           disabled={!module?.name || isGeneratingPresentation}
           opacity={!module?.name ? 0.5 : 1}
           onPress={handleHelpMeUnderstand}
+          aria-label="Generate Canva presentation"
         >
           {isGeneratingPresentation ? 'Generating...' : 'Help me understand'}
         </Button>
       </XStack>
 
       {/* Presentation Modal */}
-      {showPresentationModal && (
-        <Card
-          elevate
-          padding="$4"
-          marginTop="$3"
-          backgroundColor="$cardBackground"
-          borderColor={presentationError ? '$error' : '$success'}
-          borderWidth={2}
-        >
-          <YStack gap="$3">
-            <Text fontSize="$4" fontWeight="bold" color={presentationError ? '$error' : '$success'}>
-              {presentationError ? 'Generation Failed' : 'Presentation Ready!'}
-            </Text>
-            {presentationError ? (
-              <YStack gap="$2">
-                <Text fontSize="$3" color="$textPrimary">
-                  {presentationError}
-                </Text>
-                <Button size="$3" theme="purple" onPress={() => { setShowPresentationModal(false); handleHelpMeUnderstand(); }}>
-                  Retry
-                </Button>
-              </YStack>
-            ) : (
-              <YStack gap="$2">
-                <Text fontSize="$3" color="$textPrimary">
-                  Your Canva presentation for "{module?.name}" is ready.
-                </Text>
-                {presentationResult?.editUrl && (
-                  <Button
-                    size="$3"
-                    theme="purple"
-                    onPress={() => window.open(presentationResult.editUrl, '_blank')}
-                  >
-                    Open in Canva
-                  </Button>
-                )}
-                {presentationResult?.viewUrl && (
-                  <Button
-                    size="$3"
-                    variant="outlined"
-                    onPress={() => window.open(presentationResult.viewUrl, '_blank')}
-                  >
-                    View Presentation
-                  </Button>
-                )}
-              </YStack>
-            )}
-            <Button size="$2" variant="outlined" onPress={() => setShowPresentationModal(false)}>
-              Close
-            </Button>
-          </YStack>
-        </Card>
-      )}
+      <PresentationModal
+        isVisible={showPresentationModal}
+        onClose={() => setShowPresentationModal(false)}
+        isGenerating={isGeneratingPresentation}
+        presentationResult={presentationResult}
+        presentationError={presentationError}
+        moduleName={module?.name}
+        onRetry={() => { setShowPresentationModal(false); handleHelpMeUnderstand(); }}
+      />
     </YStack>
   );
 }

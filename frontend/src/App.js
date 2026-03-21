@@ -8,6 +8,7 @@ const UploadImageScreen = require('./screens/UploadImageScreen')
 const ModuleDetailScreen = require('./screens/ModuleDetailScreen')
 const ImageQuizScreen = require('./screens/ImageQuizScreen')
 const VoiceQuizScreen = require('./screens/VoiceQuizScreen')
+const SettingsScreen = require('./screens/SettingsScreen')
 const useAuth = require('./hooks/useAuth')
 
 const SCREENS = {
@@ -16,6 +17,7 @@ const SCREENS = {
   MODULE_DETAIL: 'module_detail',
   VOICE_QUIZ: 'voice_quiz',
   IMAGE_QUIZ: 'image_quiz',
+  SETTINGS: 'settings',
 }
 
 function AppContent() {
@@ -66,6 +68,14 @@ function AppContent() {
     )
   }
 
+  if (currentScreen === SCREENS.SETTINGS) {
+    return (
+      <SettingsScreen
+        onBack={goBack}
+      />
+    )
+  }
+
   if (currentScreen === SCREENS.VOICE_QUIZ && selectedModuleId) {
     return (
       <VoiceQuizScreen
@@ -108,10 +118,12 @@ function AppContent() {
   )
 }
 
-export default function App() {
+function App() {
   return (
     <TamaguiProvider config={tamaguiConfig}>
       <AppContent />
     </TamaguiProvider>
   )
 }
+
+module.exports = App

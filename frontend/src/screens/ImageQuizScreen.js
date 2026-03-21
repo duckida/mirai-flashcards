@@ -103,7 +103,7 @@ function ImageDisplay({ imageUrl, questionText }) {
               maxHeight: 300,
               objectFit: 'contain',
               display: loaded ? 'block' : 'none',
-              backgroundColor: '#f5f5f5',
+              backgroundColor: 'transparent',
             }}
           />
         )}
@@ -131,10 +131,10 @@ function MultipleChoiceQuestion({ question, onSelect, selectedAnswer, isAnswered
           if (isAnswered) {
             if (isCorrect) {
               borderColor = '$success';
-              backgroundColor = '$successLight';
+              backgroundColor = '$successBackground';
             } else if (isSelected && !isCorrect) {
               borderColor = '$error';
-              backgroundColor = '$errorLight';
+              backgroundColor = '$errorBackground';
             }
           } else if (isSelected) {
             borderColor = '$primary';
@@ -216,7 +216,7 @@ function FillInTheBlankQuestion({ question, userAnswer, setUserAnswer, isAnswere
         padding="$3"
         fontSize="$3"
         backgroundColor="$background"
-        borderColor={isAnswered ? '$borderColor' : '$borderColor'}
+        borderColor={isAnswered ? (userAnswer.toLowerCase().trim() === question.correctAnswer.toLowerCase().trim() ? '$success' : '$error') : '$borderColor'}
         borderWidth={1}
         borderRadius="$3"
       />
@@ -229,7 +229,7 @@ function FeedbackDisplay({ feedback, isCorrect, correctAnswer }) {
     <Card
       padding="$4"
       marginTop="$3"
-      backgroundColor={isCorrect ? '$successLight' : '$errorLight'}
+      backgroundColor={isCorrect ? '$successBackground' : '$errorBackground'}
       borderColor={isCorrect ? '$success' : '$error'}
       borderWidth={2}
     >

@@ -141,9 +141,14 @@ function DashboardScreen({ onNavigate, screens }) {
             Welcome, {user?.name || 'User'}
           </Text>
         </YStack>
-        <Button size="$3" variant="outlined" onPress={logout} borderColor="$borderColor">
-          Sign Out
-        </Button>
+        <XStack gap="$2">
+          <Button size="$3" variant="outlined" onPress={() => onNavigate && onNavigate(screens?.SETTINGS || 'settings')} aria-label="Open settings">
+            Settings
+          </Button>
+          <Button size="$3" variant="outlined" onPress={logout} aria-label="Sign out">
+            Sign Out
+          </Button>
+        </XStack>
       </XStack>
 
       {/* Error Banner */}
@@ -268,12 +273,37 @@ function DashboardScreen({ onNavigate, screens }) {
                 Quick Actions
               </Text>
               <XStack gap="$3" flexWrap="wrap">
-                <Button theme="purple" size="$3" flex={1} minWidth={140}>
-                  Start Voice Quiz
-                </Button>
-                <Button theme="purple" size="$3" flex={1} minWidth={140}>
-                  Start Image Quiz
-                </Button>
+                {modules.length > 0 ? (
+                  <>
+                    <Button
+                      theme="purple"
+                      size="$3"
+                      flex={1}
+                      minWidth={140}
+                      onPress={() => onNavigate && onNavigate(screens?.MODULE_DETAIL || 'module_detail', modules[0].id)}
+                    >
+                      Start Voice Quiz
+                    </Button>
+                    <Button
+                      theme="purple"
+                      size="$3"
+                      flex={1}
+                      minWidth={140}
+                      onPress={() => onNavigate && onNavigate(screens?.UPLOAD_IMAGE || 'upload_image')}
+                    >
+                      Upload Image
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    theme="purple"
+                    size="$3"
+                    flex={1}
+                    onPress={() => onNavigate && onNavigate(screens?.UPLOAD_IMAGE || 'upload_image')}
+                  >
+                    Upload Your First Image
+                  </Button>
+                )}
               </XStack>
             </YStack>
           </Card>

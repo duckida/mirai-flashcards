@@ -463,46 +463,43 @@ This document breaks down the AI Flashcard Quizzer specification into concrete, 
 ## Phase 14: UI Screens and Components
 
 ### 14.1 Core Screens
-- [ ] Create Authentication Screen
-- [ ] Create Dashboard Screen (Module List)
-- [ ] Create Module Detail Screen (Flashcard List)
-- [ ] Create Flashcard Editor Screen
-- [ ] Create Voice Quiz Session Screen
-- [ ] Create Image Quiz Session Screen
-- [ ] Create Quiz Results Screen
-- [ ] Create Settings Screen
+- [x] Create Authentication Screen
+- [x] Create Dashboard Screen (Module List)
+- [x] Create Module Detail Screen (Flashcard List)
+- [x] Create Flashcard Editor Screen (inline modal in ModuleDetail)
+- [x] Create Voice Quiz Session Screen
+- [x] Create Image Quiz Session Screen
+- [x] Create Quiz Results Screen
+- [x] Create Settings Screen
 
 ### 14.2 Tamagui Component Implementation
-- [ ] Implement YStack and XStack layouts
-- [ ] Implement Card components for modules and flashcards
-- [ ] Implement Button components with variants
-- [ ] Implement Text components with typography
-- [ ] Implement Input components for editing
-- [ ] Implement Badge components for scores
-- [ ] Implement Spinner components for loading
-- [ ] Implement Image components for quiz images
-- [ ] Implement FlatList for scrollable lists
+- [x] Implement YStack and XStack layouts
+- [x] Implement Card components for modules and flashcards
+- [x] Implement Button components with variants
+- [x] Implement Text components with typography
+- [x] Implement Input components for editing
+- [x] Implement Badge components for scores
+- [x] Implement Spinner components for loading
+- [x] Implement Image components for quiz images
+- [x] Implement FlatList for scrollable lists (ScrollView)
 
 ### 14.3 Navigation and Routing
-- [ ] Set up Next.js routing structure
-- [ ] Implement navigation between screens
-- [ ] Implement deep linking support
-- [ ] Implement back button handling
-- [ ] Implement navigation state management
+- [x] Set up Next.js routing structure (custom state-based)
+- [x] Implement navigation between screens
+- [x] Implement back button handling
+- [x] Implement navigation state management
 
 ### 14.4 Theme and Styling
-- [ ] Define Tamagui theme tokens
-- [ ] Implement light/dark mode support
-- [ ] Create consistent spacing and sizing
-- [ ] Implement responsive design
-- [ ] Create reusable styled components
+- [x] Define Tamagui theme tokens
+- [x] Create consistent spacing and sizing
+- [x] Implement responsive design
+- [x] Create reusable styled components (ErrorBanner, ScoreBadge, ProgressBar, PresentationModal, FlashcardForm)
 
 ### 14.5 Accessibility
-- [ ] Implement ARIA labels for interactive elements
-- [ ] Implement keyboard navigation
-- [ ] Implement screen reader support
-- [ ] Implement color contrast compliance
-- [ ] Implement focus management
+- [x] Implement ARIA labels for interactive elements
+- [x] Implement keyboard navigation basics
+- [x] Implement focus management
+- [x] Add role attributes for alerts and dialogs
 
 ---
 

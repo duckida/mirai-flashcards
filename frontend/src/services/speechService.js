@@ -3,7 +3,7 @@
  * Handles API calls for getting signed URLs
  */
 
-export async function getSignedUrl() {
+async function getSignedUrl() {
   try {
     const response = await fetch('/api/quiz/speech-token', {
       method: 'GET',
@@ -25,3 +25,5 @@ export async function getSignedUrl() {
     throw error;
   }
 }
+
+module.exports = { getSignedUrl };

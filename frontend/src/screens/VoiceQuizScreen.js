@@ -126,13 +126,45 @@ function VoiceQuizScreen({ moduleId, onBack, onNavigate, screens }) {
     }
   }, [agentMessage]);
 
+  // Speech helper functions (defined before use to avoid const hoisting issues)
+  const buildConversationContext = useCallback((sess, cards, usr) => {
+    const currentQuestionIndex = sess?.currentQuestionIndex || 0;
+    const currentFlashcard = cards[currentQuestionIndex];
+    
+    return {
+      user_id: usr?.id,
+      user_name: usr?.name || 'User',
+      session_id: sess?.id,
+      module_name: sess?.moduleName || 'Unknown Module',
+      current_question_index: currentQuestionIndex,
+      total_questions: sess?.questionCount || cards.length,
+      current_question: currentFlashcard ? currentFlashcard.question : null,
+      correct_answer: currentFlashcard ? currentFlashcard.answer : null,
+      score_correct: sess?.score?.correct || 0,
+      score_incorrect: sess?.score?.incorrect || 0,
+      is_complete: sess?.isComplete || false,
+      feedback: sess?.lastFeedback || null,
+    };
+  }, []);
+
+  const buildSessionOverrides = useCallback((modName, userName) => {
+    return {
+      agent: {
+        prompt: {
+          prompt: `You are a helpful quiz assistant for the "${modName}" module. Greet the user by name (${userName}) and help them study by asking questions from their flashcards. Read questions clearly, wait for their responses, and provide encouraging feedback. Keep your responses concise and focused on the quiz.`,
+        },
+        first_message: `Hello ${userName}! I'm your quiz assistant for ${modName}. Let's start studying!`,
+      },
+    };
+  }, []);
+
   const initializeSpeechConnection = async () => {
     try {
       // Get signed URL from backend
       const signedUrl = await speechService.getSignedUrl();
       
       // Build session overrides for quiz context
-      const overrides = SpeechService.buildSessionOverrides(
+      const overrides = buildSessionOverrides(
         module?.name || 'Unknown Module',
         user?.name || 'User'
       );
@@ -141,7 +173,7 @@ function VoiceQuizScreen({ moduleId, onBack, onNavigate, screens }) {
       const success = await startConversation(signedUrl, overrides);
       if (success) {
         // Send initial context with user info
-        const context = SpeechService.buildConversationContext(
+        const context = buildConversationContext(
           session,
           flashcards,
           user
@@ -330,7 +362,7 @@ function VoiceQuizScreen({ moduleId, onBack, onNavigate, screens }) {
     micBackgroundColor = '$error';
     micIcon = '!';
   } else if (isSpeaking) {
-    micBackgroundColor = '$blue'; // or '$purple' depending on your theme
+    micBackgroundColor = '$purple6';
     micIcon = '🔊';
   } else if (isListening) {
     micBackgroundColor = '$success';
@@ -519,7 +551,7 @@ function VoiceQuizScreen({ moduleId, onBack, onNavigate, screens }) {
               <Card
                 padding="$4"
                 width="100%"
-                backgroundColor={feedback.isCorrect ? '$successLight' : '$errorLight'}
+                backgroundColor={feedback.isCorrect ? '$successBackground' : '$errorBackground'}
                 borderColor={feedback.isCorrect ? '$success' : '$error'}
                 borderWidth={2}
               >
@@ -571,39 +603,5 @@ function VoiceQuizScreen({ moduleId, onBack, onNavigate, screens }) {
     </YStack>
   );
 }
-
-// Static class for speech service helpers (since we can't import backend service directly in frontend)
-const SpeechService = {
-  buildConversationContext(session, flashcards, user) {
-    const currentQuestionIndex = session.currentQuestionIndex || 0;
-    const currentFlashcard = flashcards[currentQuestionIndex];
-    
-    return {
-      user_id: user.id,
-      user_name: user.name || 'User',
-      session_id: session.id,
-      module_name: session.moduleName || 'Unknown Module',
-      current_question_index: currentQuestionIndex,
-      total_questions: session.questionCount || flashcards.length,
-      current_question: currentFlashcard ? currentFlashcard.question : null,
-      correct_answer: currentFlashcard ? currentFlashcard.answer : null,
-      score_correct: session.score?.correct || 0,
-      score_incorrect: session.score?.incorrect || 0,
-      is_complete: session.isComplete || false,
-      feedback: session.lastFeedback || null,
-    };
-  },
-
-  buildSessionOverrides(moduleName, userName) {
-    return {
-      agent: {
-        prompt: {
-          prompt: `You are a helpful quiz assistant for the "${moduleName}" module. Greet the user by name (${userName}) and help them study by asking questions from their flashcards. Read questions clearly, wait for their responses, and provide encouraging feedback. Keep your responses concise and focused on the quiz.`,
-        },
-        first_message: `Hello ${userName}! I'm your quiz assistant for ${moduleName}. Let's start studying!`,
-      },
-    };
-  }
-};
 
 module.exports = VoiceQuizScreen;
