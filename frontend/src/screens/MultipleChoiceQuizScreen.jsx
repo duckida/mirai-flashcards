@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 import { Spinner } from '@/components/ui/spinner';
 import useAuth from '@/hooks/useAuth';
 import { quizService } from '@/services/quizService';
@@ -12,6 +13,7 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
   const [questions, setQuestions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState(0);
   
   // Mapping of question.id -> selected option text
   const [answers, setAnswers] = useState({});
@@ -20,23 +22,44 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
 
   // Start Session
   useEffect(() => {
+    let progressInterval;
+    
     async function initQuiz() {
       setIsLoading(true);
+      setGenerationProgress(0);
+      
+      // Simulate progress up to 95% over 8 seconds (typical AI generation time)
+      progressInterval = setInterval(() => {
+        setGenerationProgress(prev => {
+          if (prev >= 95) return 95;
+          return prev + (95 / (8000 / 100)); // 100ms ticks
+        });
+      }, 100);
+
       try {
         const res = await quizService.startSession(user.id, moduleId, 'multiple_choice', 1, flashcard?.id);
-        if (res.success) {
-          setSession(res.session);
-          if (res.session.preGeneratedQuestions) {
-            setQuestions(res.session.preGeneratedQuestions);
+        
+        // Complete the progress bar
+        setGenerationProgress(100);
+        clearInterval(progressInterval);
+        
+        // Wait a tiny bit so user sees 100% before transition
+        setTimeout(() => {
+          if (res.success) {
+            setSession(res.session);
+            if (res.session.preGeneratedQuestions) {
+              setQuestions(res.session.preGeneratedQuestions);
+            } else {
+              console.error('No pre-generated questions returned.');
+            }
           } else {
-            console.error('No pre-generated questions returned.');
+            console.error('Failed to start session');
           }
-        } else {
-          console.error('Failed to start session');
-        }
+          setIsLoading(false);
+        }, 300);
       } catch (err) {
         console.error(err);
-      } finally {
+        clearInterval(progressInterval);
         setIsLoading(false);
       }
     }
@@ -44,6 +67,10 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
     if (user && moduleId) {
       initQuiz();
     }
+    
+    return () => {
+      if (progressInterval) clearInterval(progressInterval);
+    };
   }, [user, moduleId, flashcard?.id]);
 
   const handleOptionSelect = (questionId, option) => {
@@ -93,9 +120,13 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-bg gap-4">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-bg gap-6 p-6">
         <Spinner size="lg" />
-        <p className="text-text-secondary">Generating your quiz...</p>
+        <div className="w-full max-w-xs space-y-2 text-center">
+          <p className="text-text-primary font-medium">Generating 8 unique questions...</p>
+          <Progress value={generationProgress} indicatorClassName="bg-primary" className="h-3" />
+          <p className="text-xs text-text-muted">{Math.round(generationProgress)}%</p>
+        </div>
       </div>
     );
   }
@@ -127,7 +158,7 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
             <Card key={q.id} className="flex flex-col shadow-sm">
               <CardHeader>
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="w-8 h-8 rounded-full bg-primary-lighter text-primary font-bold flex items-center justify-center text-sm">
+                  <span className="w-8 h-8 rounded-full bg-primary-lighter text-primary font-bold flex items-center justify-center text-sm shrink-0">
                     {idx + 1}
                   </span>
                   <CardTitle className="text-lg leading-relaxed m-0">
