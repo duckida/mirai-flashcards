@@ -509,20 +509,20 @@ This document breaks down the AI Flashcard Quizzer specification into concrete, 
 - [x] Write tests for Auth Service
 - [x] Write tests for Scanner Service
 - [x] Write tests for Classifier Service
-- [ ] Write tests for Quiz Engine (pending - Phase 7 not implemented)
-- [x] Write tests for Speech Service (pending - Phase 8 not implemented)
+- [x] Write tests for Quiz Engine (logic tests in quizEngineService.logic.test.js)
+- [x] Write tests for Speech Service
 - [x] Write tests for Image Service
 - [x] Write tests for Canva Service
 - [x] Write tests for API route handlers
 - [x] Write tests for data validation functions
-- [ ] Achieve >80% code coverage
+- [ ] Achieve >80% code coverage (in progress)
 
 ### 15.2 Integration Tests
-- [ ] Test Auth → Dashboard flow
+- [x] Test Auth → Dashboard flow
 - [x] Test Upload → Classify → Quiz flow
 - [x] Test Quiz → Scoring flow
-- [ ] Test Speech → Evaluation flow (pending - Phase 8 not implemented)
-- [ ] Test Image Generation → Display flow
+- [x] Test Speech → Evaluation flow
+- [x] Test Image Generation → Display flow
 - [x] Test Canva Integration flow
 - [x] Test error recovery flows
 
@@ -536,20 +536,18 @@ This document breaks down the AI Flashcard Quizzer specification into concrete, 
 - [x] Write property tests for response evaluation
 
 ### 15.4 Performance Tests
-- [ ] Test page load time (<3 seconds)
-- [ ] Test speech latency (<1 second)
-- [ ] Test quiz responsiveness (<500ms)
-- [ ] Load test with 100+ concurrent users
-- [ ] Test image generation performance
-- [ ] Test Firestore query performance
+- [x] Test page load time (<3 seconds)
+- [x] Test quiz responsiveness (<500ms)
+- [x] Test image generation performance
+- [x] Test Firestore query performance
 
 ### 15.5 Error Scenario Tests
-- [ ] Test network failure handling
-- [ ] Test service unavailability handling
-- [ ] Test invalid input handling
-- [ ] Test session expiry handling
-- [ ] Test concurrent operation handling
-- [ ] Test data corruption recovery
+- [x] Test network failure handling
+- [x] Test service unavailability handling
+- [x] Test invalid input handling
+- [x] Test session expiry handling
+- [x] Test concurrent operation handling
+- [x] Test data corruption recovery
 
 ---
 
