@@ -399,6 +399,7 @@ function ImageQuizScreen({ moduleId, onBack, onNavigate, screens }) {
         summary={summary}
         flashcards={flashcards}
         moduleId={moduleId}
+        moduleName={module?.name}
         onNavigate={onNavigate}
         screens={screens}
         onReviewWeak={handleReviewWeak}

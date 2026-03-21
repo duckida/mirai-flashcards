@@ -9,6 +9,7 @@
 const React = require('react');
 const { useState, useCallback } = React;
 const { YStack, XStack, Text, Button, Card, ScrollView } = require('@tamagui/core');
+const { requestPresentation } = require('../services/canvaService');
 
 function ScoreChangeItem({ flashcardId, result, flashcards }) {
   const flashcard = flashcards?.find(fc => fc.id === flashcardId);
@@ -53,8 +54,29 @@ function ScoreChangeItem({ flashcardId, result, flashcards }) {
   );
 }
 
-function QuizResultsScreen({ summary, flashcards, moduleId, onNavigate, screens, onReviewWeak }) {
+function QuizResultsScreen({ summary, flashcards, moduleId, moduleName, onNavigate, screens, onReviewWeak }) {
   const [showDetails, setShowDetails] = useState(false);
+  const [isGeneratingPresentation, setIsGeneratingPresentation] = useState(false);
+  const [presentationResult, setPresentationResult] = useState(null);
+  const [presentationError, setPresentationError] = useState(null);
+  const [showPresentationModal, setShowPresentationModal] = useState(false);
+
+  const handleHelpMeUnderstand = useCallback(async () => {
+    if (!moduleName) return;
+    setIsGeneratingPresentation(true);
+    setPresentationError(null);
+    setPresentationResult(null);
+    try {
+      const result = await requestPresentation(moduleName);
+      setPresentationResult(result);
+      setShowPresentationModal(true);
+    } catch (err) {
+      setPresentationError(err.message || 'Failed to generate presentation');
+      setShowPresentationModal(true);
+    } finally {
+      setIsGeneratingPresentation(false);
+    }
+  }, [moduleName]);
 
   if (!summary) {
     return (
@@ -244,9 +266,10 @@ function QuizResultsScreen({ summary, flashcards, moduleId, onNavigate, screens,
           )}
 
           {/* Action Buttons */}
-          <XStack gap="$3" paddingVertical="$3">
+          <XStack gap="$3" paddingVertical="$3" flexWrap="wrap">
             <Button
               flex={1}
+              minWidth={120}
               size="$3"
               theme="purple"
               onPress={() => onNavigate && onNavigate(screens?.MODULE_DETAIL || 'module_detail', moduleId)}
@@ -256,6 +279,7 @@ function QuizResultsScreen({ summary, flashcards, moduleId, onNavigate, screens,
             {summary.incorrect > 0 && (
               <Button
                 flex={1}
+                minWidth={120}
                 size="$3"
                 variant="outlined"
                 theme="orange"
@@ -264,7 +288,73 @@ function QuizResultsScreen({ summary, flashcards, moduleId, onNavigate, screens,
                 Review Weak Cards
               </Button>
             )}
+            <Button
+              flex={1}
+              minWidth={120}
+              size="$3"
+              variant="outlined"
+              theme="orange"
+              disabled={!moduleName || isGeneratingPresentation}
+              opacity={!moduleName ? 0.5 : 1}
+              onPress={handleHelpMeUnderstand}
+            >
+              {isGeneratingPresentation ? 'Generating...' : 'Help me understand'}
+            </Button>
           </XStack>
+
+          {/* Presentation Modal */}
+          {showPresentationModal && (
+            <Card
+              elevate
+              padding="$4"
+              backgroundColor="$cardBackground"
+              borderColor={presentationError ? '$error' : '$success'}
+              borderWidth={2}
+            >
+              <YStack gap="$3">
+                <Text fontSize="$4" fontWeight="bold" color={presentationError ? '$error' : '$success'}>
+                  {presentationError ? 'Generation Failed' : 'Presentation Ready!'}
+                </Text>
+                {presentationError ? (
+                  <YStack gap="$2">
+                    <Text fontSize="$3" color="$textPrimary">
+                      {presentationError}
+                    </Text>
+                    <Button size="$3" theme="purple" onPress={() => { setShowPresentationModal(false); handleHelpMeUnderstand(); }}>
+                      Retry
+                    </Button>
+                  </YStack>
+                ) : (
+                  <YStack gap="$2">
+                    <Text fontSize="$3" color="$textPrimary">
+                      Your Canva presentation for "{moduleName}" is ready.
+                    </Text>
+                    {presentationResult?.editUrl && (
+                      <Button
+                        size="$3"
+                        theme="purple"
+                        onPress={() => window.open(presentationResult.editUrl, '_blank')}
+                      >
+                        Open in Canva
+                      </Button>
+                    )}
+                    {presentationResult?.viewUrl && (
+                      <Button
+                        size="$3"
+                        variant="outlined"
+                        onPress={() => window.open(presentationResult.viewUrl, '_blank')}
+                      >
+                        View Presentation
+                      </Button>
+                    )}
+                  </YStack>
+                )}
+                <Button size="$2" variant="outlined" onPress={() => setShowPresentationModal(false)}>
+                  Close
+                </Button>
+              </YStack>
+            </Card>
+          )}
         </YStack>
       </ScrollView>
     </YStack>

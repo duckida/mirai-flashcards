@@ -627,28 +627,97 @@ function ModuleDetailScreen({ moduleId, onBack, onNavigate, screens, reviewWeak 
       </ScrollView>
 
       {/* Bottom Actions */}
-      <XStack gap="$3" paddingVertical="$3">
+      <XStack gap="$3" paddingVertical="$3" flexWrap="wrap">
         <Button
           flex={1}
+          minWidth={120}
           size="$3"
           theme="purple"
-          disabled={flashcards.length === 0}
+          disabled={flashcards.length === 0 || isGeneratingPresentation}
           opacity={flashcards.length === 0 ? 0.5 : 1}
           onPress={handleStartVoiceQuiz}
         >
-          Start Voice Quiz
+          {isGeneratingPresentation ? 'Generating...' : 'Voice Quiz'}
         </Button>
         <Button
           flex={1}
+          minWidth={120}
           size="$3"
           theme="purple"
-          disabled={flashcards.length === 0}
+          disabled={flashcards.length === 0 || isGeneratingPresentation}
           opacity={flashcards.length === 0 ? 0.5 : 1}
           onPress={handleStartImageQuiz}
         >
-          Start Image Quiz
+          Image Quiz
+        </Button>
+        <Button
+          flex={1}
+          minWidth={120}
+          size="$3"
+          variant="outlined"
+          theme="orange"
+          disabled={!module?.name || isGeneratingPresentation}
+          opacity={!module?.name ? 0.5 : 1}
+          onPress={handleHelpMeUnderstand}
+        >
+          {isGeneratingPresentation ? 'Generating...' : 'Help me understand'}
         </Button>
       </XStack>
+
+      {/* Presentation Modal */}
+      {showPresentationModal && (
+        <Card
+          elevate
+          padding="$4"
+          marginTop="$3"
+          backgroundColor="$cardBackground"
+          borderColor={presentationError ? '$error' : '$success'}
+          borderWidth={2}
+        >
+          <YStack gap="$3">
+            <Text fontSize="$4" fontWeight="bold" color={presentationError ? '$error' : '$success'}>
+              {presentationError ? 'Generation Failed' : 'Presentation Ready!'}
+            </Text>
+            {presentationError ? (
+              <YStack gap="$2">
+                <Text fontSize="$3" color="$textPrimary">
+                  {presentationError}
+                </Text>
+                <Button size="$3" theme="purple" onPress={() => { setShowPresentationModal(false); handleHelpMeUnderstand(); }}>
+                  Retry
+                </Button>
+              </YStack>
+            ) : (
+              <YStack gap="$2">
+                <Text fontSize="$3" color="$textPrimary">
+                  Your Canva presentation for "{module?.name}" is ready.
+                </Text>
+                {presentationResult?.editUrl && (
+                  <Button
+                    size="$3"
+                    theme="purple"
+                    onPress={() => window.open(presentationResult.editUrl, '_blank')}
+                  >
+                    Open in Canva
+                  </Button>
+                )}
+                {presentationResult?.viewUrl && (
+                  <Button
+                    size="$3"
+                    variant="outlined"
+                    onPress={() => window.open(presentationResult.viewUrl, '_blank')}
+                  >
+                    View Presentation
+                  </Button>
+                )}
+              </YStack>
+            )}
+            <Button size="$2" variant="outlined" onPress={() => setShowPresentationModal(false)}>
+              Close
+            </Button>
+          </YStack>
+        </Card>
+      )}
     </YStack>
   );
 }

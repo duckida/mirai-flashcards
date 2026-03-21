@@ -357,35 +357,35 @@ This document breaks down the AI Flashcard Quizzer specification into concrete, 
 ## Phase 11: Canva Integration (MCP)
 
 ### 11.1 Canva Service Implementation
-- [ ] Implement Canva MCP invocation via Civic.ai
-- [ ] Create presentation generation request logic
-- [ ] Implement async presentation generation handling
-- [ ] Create presentation status polling
-- [ ] Implement presentation link retrieval
-- [ ] Handle Canva API errors gracefully
+- [x] Implement Canva MCP invocation via Civic.ai
+- [x] Create presentation generation request logic
+- [x] Implement async presentation generation handling
+- [x] Create presentation status polling
+- [x] Implement presentation link retrieval
+- [x] Handle Canva API errors gracefully
 
 ### 11.2 Presentation Generation Endpoints
-- [ ] Create `/api/canva/generate` endpoint
-- [ ] Create `/api/canva/:presentationId/status` endpoint
-- [ ] Create `/api/canva/:presentationId/link` endpoint
-- [ ] Implement request validation
-- [ ] Implement error handling
+- [x] Create `/api/canva/generate` endpoint
+- [x] Create `/api/canva/:presentationId/status` endpoint
+- [x] Create `/api/canva/:presentationId/link` endpoint
+- [x] Implement request validation
+- [x] Implement error handling
 
 ### 11.3 Canva Presentation Data Model
-- [ ] Create Firestore `presentations` collection schema
-- [ ] Implement presentation metadata storage
-- [ ] Implement presentation status tracking
-- [ ] Implement presentation link caching
-- [ ] Implement presentation expiration handling
+- [x] Create Firestore `presentations` collection schema
+- [x] Implement presentation metadata storage
+- [x] Implement presentation status tracking
+- [x] Implement presentation link caching
+- [x] Implement presentation expiration handling
 
 ### 11.4 Help Presentation UI
-- [ ] Add "Help me understand" button to Module Detail screen
-- [ ] Add "Help me understand" button to Quiz Results screen
-- [ ] Create presentation generation request UI
-- [ ] Implement loading state during generation
-- [ ] Display presentation link when ready
-- [ ] Implement error messaging for failed generation
-- [ ] Add retry button for failed requests
+- [x] Add "Help me understand" button to Module Detail screen
+- [x] Add "Help me understand" button to Quiz Results screen
+- [x] Create presentation generation request UI
+- [x] Implement loading state during generation
+- [x] Display presentation link when ready
+- [x] Implement error messaging for failed generation
+- [x] Add retry button for failed requests
 
 ---
 
@@ -524,7 +524,7 @@ This document breaks down the AI Flashcard Quizzer specification into concrete, 
 - [x] Test Quiz → Scoring flow
 - [ ] Test Speech → Evaluation flow (pending - Phase 8 not implemented)
 - [ ] Test Image Generation → Display flow
-- [ ] Test Canva Integration flow
+- [x] Test Canva Integration flow
 - [x] Test error recovery flows
 
 ### 15.3 Property-Based Tests
