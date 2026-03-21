@@ -21,6 +21,8 @@ export default function VoiceQuizScreen({ moduleId, moduleName, flashcard, userI
   const sessionIdRef = useRef(null)
   // Task 5.1: track whether user intentionally ended the session
   const userEndedRef = useRef(false)
+  // Track whether onConnect has ever fired for this mount (guards premature disconnect dialog)
+  const hasConnectedRef = useRef(false)
 
   const startVoiceSession = useCallback(async () => {
     if (!flashcard || startedRef.current) return
@@ -62,6 +64,7 @@ export default function VoiceQuizScreen({ moduleId, moduleName, flashcard, userI
           },
         },
         onConnect: async () => {
+          hasConnectedRef.current = true
           setIsConnected(true)
           setIsConnecting(false)
           setStatus('connected')
@@ -79,7 +82,7 @@ export default function VoiceQuizScreen({ moduleId, moduleName, flashcard, userI
         onDisconnect: () => {
           setIsConnected(false)
           setStatus('disconnected')
-          if (!userEndedRef.current) {
+          if (hasConnectedRef.current && !userEndedRef.current) {
             setShowDisconnectDialog(true)
           }
         },
@@ -171,19 +174,22 @@ export default function VoiceQuizScreen({ moduleId, moduleName, flashcard, userI
 
   useEffect(() => {
     return () => {
-      // Guard: only call endSession if the WebSocket is still open.
-      // conversationRef.current.endSession() throws if the socket is already
-      // CLOSING/CLOSED (e.g. after a StrictMode cleanup or Civic auth re-render).
       const conv = conversationRef.current
-      if (conv) {
-        conversationRef.current = null
-        startedRef.current = false
+      conversationRef.current = null
+      startedRef.current = false
+      // Only call endSession if onConnect actually fired — i.e., the WebSocket
+      // reached OPEN state. If hasConnectedRef is false the socket is still
+      // CONNECTING (StrictMode cleanup, rapid nav), and calling endSession()
+      // causes the SDK to attempt sendMessage on a CLOSING socket, producing
+      // "WebSocket is already in CLOSING or CLOSED state."
+      if (conv && hasConnectedRef.current) {
         try {
           conv.endSession()
         } catch (_) {
           // Already closed — safe to ignore
         }
       }
+      hasConnectedRef.current = false
     }
   }, [])
 

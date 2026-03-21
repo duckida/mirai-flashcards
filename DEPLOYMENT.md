@@ -85,7 +85,7 @@ vercel link    # Link to a DIFFERENT Vercel project than backend
 ### Configure Environment Variables
 
 ```bash
-vercel env add REACT_APP_API_URL
+vercel env add VITE_API_URL
 # Set to your deployed backend URL, e.g., https://your-backend.vercel.app
 ```
 
@@ -139,6 +139,7 @@ cd frontend && vercel rollback
 
 ### CORS Errors
 - Verify `FRONTEND_URL` env var matches the deployed frontend URL exactly
+- `FRONTEND_URL` supports comma-separated origins (e.g., `http://localhost:3001,https://production.vercel.app`)
 - Check that `cors.js` is wrapping all API routes via `apiHandler`/`protectedHandler`
 
 ### Firebase Permission Errors

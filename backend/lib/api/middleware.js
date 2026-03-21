@@ -24,7 +24,7 @@ export function apiHandler(handler) {
     // Apply rate limiting
     const rateLimitResult = rateLimitMiddleware(request);
     if (rateLimitResult) {
-      return addCorsHeaders(rateLimitResult);
+      return addCorsHeaders(rateLimitResult, request);
     }
 
     // Log the request
@@ -36,7 +36,7 @@ export function apiHandler(handler) {
       return response;
     } catch (error) {
       logResponse(requestId, start, 500);
-      return addCorsHeaders(handleApiError(error, `API ${request.method} ${new URL(request.url).pathname}`));
+      return addCorsHeaders(handleApiError(error, `API ${request.method} ${new URL(request.url).pathname}`), request);
     }
   });
 }
@@ -51,7 +51,7 @@ export function protectedHandler(handler) {
     // Apply rate limiting
     const rateLimitResult = rateLimitMiddleware(request);
     if (rateLimitResult) {
-      return addCorsHeaders(rateLimitResult);
+      return addCorsHeaders(rateLimitResult, request);
     }
 
     // Check authentication
@@ -60,7 +60,7 @@ export function protectedHandler(handler) {
       return addCorsHeaders(new Response(
         JSON.stringify({ success: false, error: 'Authentication required' }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
-      ));
+      ), request);
     }
 
     // Log the request
@@ -72,7 +72,7 @@ export function protectedHandler(handler) {
       return response;
     } catch (error) {
       logResponse(requestId, start, 500);
-      return addCorsHeaders(handleApiError(error, `API ${request.method} ${new URL(request.url).pathname}`));
+      return addCorsHeaders(handleApiError(error, `API ${request.method} ${new URL(request.url).pathname}`), request);
     }
   });
 }

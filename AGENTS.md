@@ -49,6 +49,12 @@ mirai-hackathon/
 
 ### Key Commands
 ```bash
+# Local Development (single command — starts both services)
+npm run dev                      # Backend (port 3000) + Frontend (port 3001)
+npm run dev:backend              # Backend only
+npm run dev:frontend             # Frontend only
+npm run install:all              # Install deps for both projects
+
 # Backend
 cd backend && npm run dev        # Start API server (port 3000)
 npm run build && npm start       # Production build
@@ -59,6 +65,12 @@ npm run db:seed                  # Seed Firestore test data
 cd frontend && npm run dev       # Start dev server (port 3001)
 npm run build                    # Build to dist/
 ```
+
+### Local Dev Setup
+- `npm run dev` from root starts both services via `concurrently`
+- `frontend/.env.local` overrides `VITE_API_URL` to empty, so API calls go through Vite's dev proxy (`localhost:3001/api/*` → `localhost:3000/api/*`)
+- `FRONTEND_URL` in `backend/.env.local` supports comma-separated origins for CORS
+- The root `package.json` is orchestration-only — `backend/` and `frontend/` remain independent projects with separate `node_modules`
 
 Always use the Vercel CLI for Vercel operations.
 
@@ -117,7 +129,9 @@ Custom colors available:
 
 ### Environment Variables
 Backend `.env.local`: Firebase credentials, Civic.ai keys, ElevenLabs API key, OpenAI API key
-Frontend `VITE_API_URL`: Backend API endpoint (default: http://localhost:3000)
+Frontend `.env.local`: `VITE_API_URL` (empty for local proxy, or set to backend URL)
+Frontend `.env`: `VITE_API_URL` (production default), `VITE_CIVIC_CLIENT_ID`
+Backend `FRONTEND_URL`: Comma-separated allowed CORS origins
 
 ### Key Backend Services
 - **authService.js** - Civic.ai OAuth & session management

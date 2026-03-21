@@ -28,9 +28,9 @@
   - Mark task complete when tests are written, run, and passing on unfixed code
   - _Requirements: 3.1, 3.2, 3.3_
 
-- [-] 3. Fix premature disconnect dialog in VoiceQuizScreen
+- [x] 3. Fix premature disconnect dialog in VoiceQuizScreen
 
-  - [-] 3.1 Implement the fix in `frontend/src/screens/VoiceQuizScreen.jsx`
+  - [x] 3.1 Implement the fix in `frontend/src/screens/VoiceQuizScreen.jsx`
     - Add `const hasConnectedRef = useRef(false)` alongside `userEndedRef` and `startedRef`
     - Inside the `onConnect` callback, add `hasConnectedRef.current = true` before `setIsConnected(true)`
     - Change the `onDisconnect` guard from `if (!userEndedRef.current)` to `if (hasConnectedRef.current && !userEndedRef.current)`
@@ -40,7 +40,7 @@
     - _Preservation: all onDisconnect invocations after onConnect has fired are unaffected; intentional ends, reconnects, and no-content errors unchanged_
     - _Requirements: 2.1, 2.2, 2.3, 3.1, 3.2, 3.3, 3.4_
 
-  - [~] 3.2 Verify bug condition exploration test now passes
+  - [x] 3.2 Verify bug condition exploration test now passes
     - **Property 1: Expected Behavior** - Premature Disconnect Does Not Surface Dialog
     - **IMPORTANT**: Re-run the SAME test from task 1 - do NOT write a new test
     - The test from task 1 encodes the expected behavior: `onDisconnect` before `onConnect` must not show the dialog
@@ -48,14 +48,14 @@
     - **EXPECTED OUTCOME**: Test PASSES (confirms bug is fixed)
     - _Requirements: 2.1, 2.2, 2.3_
 
-  - [~] 3.3 Verify preservation tests still pass
+  - [x] 3.3 Verify preservation tests still pass
     - **Property 2: Preservation** - Genuine Unexpected Disconnect Still Shows Dialog
     - **IMPORTANT**: Re-run the SAME tests from task 2 - do NOT write new tests
     - Run preservation cases in `frontend/src/screens/__tests__/VoiceQuizScreen.disconnect.test.jsx`
     - **EXPECTED OUTCOME**: Tests PASS (confirms no regressions — genuine disconnects still show dialog, intentional ends still skip it)
     - _Requirements: 3.1, 3.2, 3.3_
 
-- [ ] 4. Checkpoint - Ensure all tests pass
+- [x] 4. Checkpoint - Ensure all tests pass
   - Run the full test file: `cd frontend && npx vitest run src/screens/__tests__/VoiceQuizScreen.disconnect.test.jsx`
   - Ensure all Property 1 and Property 2 cases pass
   - Ask the user if any questions arise

@@ -21,7 +21,7 @@ export const GET = apiHandler(async (request, { params }) => {
     return errorResponse('Unauthorized', 401);
   }
 
-  const { designId } = params;
+  const { presentationId: designId } = await params;
 
   const presentationRef = db.collection('presentations').doc(designId);
   const presentationDoc = await presentationRef.get();

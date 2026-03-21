@@ -22,4 +22,4 @@ const civicPost = handler();
 
 export const GET = civicGet;
 export const POST = civicPost;
-export const OPTIONS = () => preflightResponse();
+export const OPTIONS = (request) => preflightResponse(request);
