@@ -1,9 +1,9 @@
 /**
  * Centralized CORS handling for API routes.
- * Replaces per-route OPTIONS handlers with shared utilities.
+ * Handles preflight OPTIONS requests and adds CORS headers to responses.
  */
 
-const ALLOWED_ORIGIN = process.env.FRONTEND_URL || '*';
+const ALLOWED_ORIGIN = process.env.FRONTEND_URL || 'http://localhost:3001';
 const ALLOWED_METHODS = 'GET, POST, PATCH, DELETE, OPTIONS';
 const ALLOWED_HEADERS = 'Content-Type, Authorization, x-user-id';
 
@@ -15,6 +15,7 @@ export function corsHeaders() {
     'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
     'Access-Control-Allow-Methods': ALLOWED_METHODS,
     'Access-Control-Allow-Headers': ALLOWED_HEADERS,
+    'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Max-Age': '86400',
   };
 }
