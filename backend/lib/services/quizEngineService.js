@@ -14,7 +14,7 @@ import { generateQuizImage } from './imageService.js';
 
 const db = getFirestore();
 
-const AI_MODEL = process.env.CLASSIFICATION_MODEL || 'google/gemini-3.1-flash-lite-preview';
+const AI_MODEL = process.env.CLASSIFICATION_MODEL || 'alibaba/qwen3-vl-instruct';
 
 // ============================================================
 // Exercise type constants

@@ -68,9 +68,9 @@ This is a full-stack JavaScript application with a Next.js backend and React fro
 - Multiple voice options
 
 **AI Services**: Vercel AI APIs
-- Qwen3.5 Flash for image analysis
+- Qwen3 VL Instruct for image analysis
 - Gemini 2.5 Flash for image generation
-- Qwen3.5 Flash for text classification
+- Qwen3 VL Instruct for text classification
 
 **Presentations**: Canva MCP (via Civic.ai)
 - Model Context Protocol integration

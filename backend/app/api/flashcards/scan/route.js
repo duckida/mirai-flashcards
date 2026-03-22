@@ -75,7 +75,7 @@ export const GET = apiHandler(async () => {
     service: 'flashcard-scanner',
     status: 'configured',
     aiGateway: {
-      model: process.env.VISION_MODEL || 'openai/gpt-4o',
+      model: process.env.VISION_MODEL || 'alibaba/qwen3-vl-instruct',
     },
   });
 });
