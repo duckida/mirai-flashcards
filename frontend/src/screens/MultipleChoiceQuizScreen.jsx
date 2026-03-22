@@ -3,67 +3,55 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Spinner } from '@/components/ui/spinner';
+import { Badge } from '@/components/ui/badge';
 import useAuth from '@/hooks/useAuth';
 import { quizService } from '@/services/quizService';
 
 export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashcard, onBack, onComplete }) {
   const { user } = useAuth();
-  
+
   const [session, setSession] = useState(null);
   const [questions, setQuestions] = useState([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [error, setError] = useState(null);
-  
-  // Mapping of question.id -> selected option text
-  const [answers, setAnswers] = useState({});
-  // Mapping of question.id -> { isCorrect, feedbackText, correctAnswer }
-  const [feedbacks, setFeedbacks] = useState(null);
 
-  console.log('MultipleChoiceQuizScreen mounted', { moduleId, flashcardId: flashcard?.id });
+  const [selectedOption, setSelectedOption] = useState(null);
+  const [feedback, setFeedback] = useState(null);
+  const [results, setResults] = useState([]);
 
-  // Start Session
   useEffect(() => {
     let progressInterval;
-    
+
     async function initQuiz() {
       setIsLoading(true);
       setGenerationProgress(0);
       setError(null);
-      
-      // Simulate progress up to 95% over 8 seconds (typical AI generation time)
+
       progressInterval = setInterval(() => {
         setGenerationProgress(prev => {
           if (prev >= 95) return 95;
-          return prev + (95 / (8000 / 100)); // 100ms ticks
+          return prev + (95 / (8000 / 100));
         });
       }, 100);
 
       try {
-        console.log('Calling startSession with:', { userId: user.id, moduleId, flashcardId: flashcard?.id });
-        
         const res = await quizService.startSession(user.id, moduleId, 'multiple_choice', 1, flashcard?.id);
-        
-        console.log('startSession response:', res);
-        
-        // Complete the progress bar
+
         setGenerationProgress(100);
         clearInterval(progressInterval);
-        
-        // Wait a tiny bit so user sees 100% before transition
+
         setTimeout(() => {
           if (res.success) {
             setSession(res.session);
             if (res.session.preGeneratedQuestions && res.session.preGeneratedQuestions.length > 0) {
               setQuestions(res.session.preGeneratedQuestions);
-              console.log('Questions loaded:', res.session.preGeneratedQuestions.length);
             } else {
-              console.error('No pre-generated questions returned.', res.session);
               setError('No questions were generated. The flashcard may be empty.');
             }
           } else {
-            console.error('Failed to start session:', res);
             setError(res.error || 'Failed to start session');
           }
           setIsLoading(false);
@@ -75,45 +63,52 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
         setIsLoading(false);
       }
     }
-    
+
     if (user && moduleId) {
       initQuiz();
     }
-    
+
     return () => {
       if (progressInterval) clearInterval(progressInterval);
     };
   }, [user, moduleId, flashcard?.id]);
 
-  const handleOptionSelect = (questionId, option) => {
-    if (isSubmitting || feedbacks) return;
-    setAnswers(prev => ({ ...prev, [questionId]: option }));
+  const handleOptionSelect = (option) => {
+    if (feedback || isSubmitting) return;
+    setSelectedOption(option);
   };
 
-  const handleSubmit = async () => {
-    if (isSubmitting || feedbacks) return;
+  const handleSubmitAnswer = async () => {
+    if (!selectedOption || feedback || isSubmitting) return;
     setIsSubmitting(true);
-    
+
     try {
-      const results = {};
-      
-      // Submit all answers sequentially to prevent backend race condition on session.responses
-      for (const q of questions) {
-        const res = await quizService.submitAnswer(session.id, q.id, answers[q.id]);
-        if (res.success) {
-          results[q.id] = {
-            isCorrect: res.result.isCorrect,
-            feedbackText: res.result.feedback,
-            correctAnswer: res.result.correctAnswer
-          };
-        }
+      const q = questions[currentQuestionIndex];
+      const res = await quizService.submitAnswer(session.id, q.id, selectedOption);
+
+      if (res.success) {
+        const resultData = {
+          isCorrect: res.result.isCorrect,
+          feedbackText: res.result.feedback,
+          correctAnswer: res.result.correctAnswer || q.correctAnswer
+        };
+        setFeedback(resultData);
+        setResults(prev => [...prev, { questionId: q.id, ...resultData }]);
       }
-      
-      setFeedbacks(results);
     } catch (err) {
-      console.error('Failed to submit answers', err);
+      console.error('Failed to submit answer', err);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleNextQuestion = () => {
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+      setSelectedOption(null);
+      setFeedback(null);
+    } else {
+      handleFinish();
     }
   };
 
@@ -126,6 +121,7 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
       }
     } catch (err) {
       console.error('Failed to end session', err);
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -135,7 +131,7 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
       <div className="min-h-screen flex flex-col items-center justify-center bg-bg gap-6 p-6">
         <Spinner size="lg" />
         <div className="w-full max-w-xs space-y-2 text-center">
-          <p className="text-text-primary font-medium">Generating 8 unique questions...</p>
+          <p className="text-text-primary font-medium">Generating questions...</p>
           <Progress value={generationProgress} indicatorClassName="bg-primary" className="h-3" />
           <p className="text-xs text-text-muted">{Math.round(generationProgress)}%</p>
         </div>
@@ -164,103 +160,114 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
     );
   }
 
-  const allAnswered = Object.keys(answers).length === questions.length;
+  const q = questions[currentQuestionIndex];
+  const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+  const isLastQuestion = currentQuestionIndex === questions.length - 1;
 
   return (
     <div className="min-h-screen bg-bg flex flex-col">
       <header className="sticky top-0 z-10 flex items-center justify-between p-4 border-b border-border bg-white shadow-sm">
-        <h1 className="text-xl font-bold text-text-primary">Text Quiz</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-bold text-text-primary">Text Quiz</h1>
+          <Badge variant="secondary">{currentQuestionIndex + 1} / {questions.length}</Badge>
+        </div>
         <Button variant="outline" size="sm" onClick={onBack} disabled={isSubmitting}>Cancel</Button>
       </header>
 
-      <div className="flex-1 p-4 max-w-3xl mx-auto w-full flex flex-col gap-6 py-6">
-        {questions.map((q, idx) => {
-          const selectedOption = answers[q.id];
-          const feedback = feedbacks ? feedbacks[q.id] : null;
+      <div className="flex-1 flex flex-col">
+        <div className="p-2 bg-white border-b border-border">
+          <Progress value={progress} indicatorClassName="bg-primary" className="h-2" />
+        </div>
 
-          return (
-            <Card key={q.id} className="flex flex-col shadow-sm">
-              <CardHeader>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="w-8 h-8 rounded-full bg-primary-lighter text-primary font-bold flex items-center justify-center text-sm shrink-0">
-                    {idx + 1}
-                  </span>
-                  <CardTitle className="text-lg leading-relaxed m-0">
-                    {q.question}
-                  </CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3">
-                {q.options?.map((option, oIdx) => {
-                  let btnVariant = "outline";
-                  let btnClass = "justify-start h-auto py-4 px-4 text-left font-normal border-2 transition-all";
-                  
-                  if (feedback) {
-                    // Quiz submitted
-                    if (option === selectedOption) {
-                      btnVariant = feedback.isCorrect ? "success" : "destructive";
-                      btnClass += feedback.isCorrect ? " border-success bg-success-light text-success-dark font-medium" : " border-error bg-error-light text-error-dark font-medium";
-                    } else if (option === feedback.correctAnswer || option === q.correctAnswer) {
-                      // Correct option that wasn't selected
-                      btnVariant = "success";
-                      btnClass += " border-success bg-success-light text-success-dark font-medium";
-                    } else {
-                      btnClass += " opacity-40";
-                    }
-                  } else if (option === selectedOption) {
-                    // Selected but not yet submitted
-                    btnVariant = "secondary";
-                    btnClass += " border-primary bg-primary-lighter text-primary font-medium";
+        <div className="flex-1 p-4 max-w-2xl mx-auto w-full flex flex-col justify-center">
+          <Card className={`shadow-sm ${feedback ? (feedback.isCorrect ? 'border-2 border-success' : 'border-2 border-error') : ''}`}>
+            <CardHeader>
+              <div className="flex items-center gap-3 mb-2">
+                <span className="w-10 h-10 rounded-full bg-primary-lighter text-primary font-bold flex items-center justify-center text-lg shrink-0">
+                  {currentQuestionIndex + 1}
+                </span>
+                <CardTitle className="text-xl leading-relaxed m-0">
+                  {q.question}
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              {q.options?.map((option, oIdx) => {
+                let btnVariant = "outline";
+                let btnClass = "justify-start h-auto py-4 px-4 text-left font-normal border-2 transition-all";
+
+                if (feedback) {
+                  if (option === selectedOption) {
+                    btnVariant = feedback.isCorrect ? "success" : "destructive";
+                    btnClass += feedback.isCorrect
+                      ? " border-success bg-success-light text-success-dark font-medium"
+                      : " border-error bg-error-light text-error-dark font-medium";
+                  } else if (option === feedback.correctAnswer || option === q.correctAnswer) {
+                    btnVariant = "success";
+                    btnClass += " border-success bg-success-light text-success-dark font-medium";
+                  } else {
+                    btnClass += " opacity-40";
                   }
+                } else if (option === selectedOption) {
+                  btnVariant = "secondary";
+                  btnClass += " border-primary bg-primary-lighter text-primary font-medium";
+                }
 
-                  return (
-                    <Button
-                      key={oIdx}
-                      variant={btnVariant}
-                      className={btnClass}
-                      onClick={() => handleOptionSelect(q.id, option)}
-                      disabled={!!feedbacks || isSubmitting}
-                    >
-                      {option}
-                    </Button>
-                  );
-                })}
+                return (
+                  <Button
+                    key={oIdx}
+                    variant={btnVariant}
+                    className={btnClass}
+                    onClick={() => handleOptionSelect(option)}
+                    disabled={!!feedback || isSubmitting}
+                  >
+                    {option}
+                  </Button>
+                );
+              })}
 
-                {feedback && (
-                  <div className={`mt-3 p-4 rounded-xl text-sm border-l-4 ${feedback.isCorrect ? 'bg-success-light/30 border-l-success' : 'bg-error-light/30 border-l-error'}`}>
-                    <span className="font-bold mr-2">
-                      {feedback.isCorrect ? '✓ Correct:' : '✗ Incorrect:'}
-                    </span>
-                    <span className="text-text-secondary">
-                      {feedback.feedbackText || (feedback.isCorrect ? "Great job!" : `The correct answer is: ${q.correctAnswer}`)}
+              {feedback && (
+                <div className={`mt-4 p-4 rounded-xl text-sm border-l-4 ${feedback.isCorrect ? 'bg-success-light/30 border-l-success' : 'bg-error-light/30 border-l-error'}`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xl">{feedback.isCorrect ? '✅' : '❌'}</span>
+                    <span className="font-bold text-base">
+                      {feedback.isCorrect ? 'Correct!' : 'Incorrect'}
                     </span>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
+                  {!feedback.isCorrect && (
+                    <p className="text-text-secondary mt-2">
+                      The correct answer is: <strong>{feedback.correctAnswer || q.correctAnswer}</strong>
+                    </p>
+                  )}
+                  {feedback.feedbackText && (
+                    <p className="text-text-secondary mt-1">{feedback.feedbackText}</p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
-        <div className="mt-4 mb-8 sticky bottom-4 z-10">
-          {!feedbacks ? (
-            <Button 
-              className="w-full shadow-lg h-14 text-lg" 
-              size="lg" 
-              onClick={handleSubmit}
-              disabled={!allAnswered || isSubmitting}
+        <div className="p-4 border-t border-border max-w-2xl mx-auto w-full">
+          {!feedback ? (
+            <Button
+              className="w-full shadow-lg h-14 text-lg"
+              size="lg"
+              onClick={handleSubmitAnswer}
+              disabled={!selectedOption || isSubmitting}
             >
               {isSubmitting ? <Spinner size="sm" className="mr-2" /> : null}
-              {isSubmitting ? 'Submitting...' : (allAnswered ? 'Submit Quiz' : `Answer ${questions.length - Object.keys(answers).length} more to submit`)}
+              {isSubmitting ? 'Checking...' : 'Check Answer'}
             </Button>
           ) : (
-            <Button 
-              className="w-full shadow-lg h-14 text-lg" 
-              size="lg" 
-              onClick={handleFinish}
+            <Button
+              className="w-full shadow-lg h-14 text-lg"
+              size="lg"
+              onClick={handleNextQuestion}
               disabled={isSubmitting}
             >
               {isSubmitting ? <Spinner size="sm" className="mr-2" /> : null}
-              {isSubmitting ? 'Finishing...' : 'Finish & See Results'}
+              {isSubmitting ? 'Finishing...' : (isLastQuestion ? 'See Results' : 'Next Question →')}
             </Button>
           )}
         </div>

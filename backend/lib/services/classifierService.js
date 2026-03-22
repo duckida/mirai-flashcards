@@ -24,7 +24,7 @@ import { gateway, generateText } from 'ai';
  * Configuration for AI classification via Vercel AI Gateway
  */
 const CLASSIFICATION_CONFIG = {
-  model: process.env.CLASSIFICATION_MODEL || 'qwen/qwen3.5-flash',
+  model: process.env.CLASSIFICATION_MODEL || 'google/gemini-3.1-flash-lite-preview',
   maxTokens: 1024,
 };
 

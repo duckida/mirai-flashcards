@@ -1,56 +1,63 @@
 /**
  * Canva MCP Integration Service
  * 
- * Handles presentation generation via Civic.ai MCP Hub.
- * Uses Civic Auth tokens to invoke Canva MCP tools.
+ * Handles presentation generation via Civic MCP Hub.
+ * Uses Civic Auth tokens to invoke Canva MCP tools via the Civic Hub.
  * 
- * Architecture:
- * - Civic Auth provides OAuth tokens that are directly valid for Civic MCP Hub
- * - Civic MCP Hub orchestrates Canva MCP server execution
- * - No token exchange needed (Civic Auth tokens work directly)
- * 
- * Reference: https://docs.civic.com/labs/projects/mcp-hub
+ * Based on Civic docs: https://docs.civic.com/labs/projects/mcp-hub
+ * The Civic Hub endpoint is: https://app.civic.com/hub/mcp
+ * Civic Auth tokens are directly valid for the MCP Hub.
  */
 
-const CIVIC_MCP_HUB_URL = process.env.CIVIC_MCP_HUB_URL || 'https://hub.mcp.civic.com';
-const CIVIC_MCP_API_KEY = process.env.CIVIC_MCP_API_KEY;
+const CIVIC_HUB_MCP_URL = process.env.CIVIC_HUB_MCP_URL || 'https://app.civic.com/hub/mcp';
 
 /**
- * Call a Canva MCP tool via Civic Hub
+ * Call a Canva MCP tool via Civic Hub using the MCP protocol
  * @param {string} toolName - Name of the Canva MCP tool to call
- * @param {Object} arguments - Tool arguments
+ * @param {Object} toolArguments - Tool arguments
  * @param {string} civicAuthToken - Civic Auth token (directly valid for MCP Hub)
  * @returns {Promise<Object>} Tool execution result
  */
 async function callCanvaTool(toolName, toolArguments, civicAuthToken) {
-  if (!CIVIC_MCP_API_KEY) {
-    throw new Error('CIVIC_MCP_API_KEY not configured');
-  }
-
   if (!civicAuthToken) {
     throw new Error('Civic Auth token required');
   }
 
   try {
-    const response = await fetch(`${CIVIC_MCP_HUB_URL}/api/tools/call/canva`, {
+    // Use the MCP protocol to call tools via Civic Hub
+    // The Civic Hub exposes an MCP endpoint that accepts JSON-RPC requests
+    const requestId = Date.now();
+    
+    const response = await fetch(CIVIC_HUB_MCP_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${civicAuthToken}`,
-        'X-API-Key': CIVIC_MCP_API_KEY,
       },
       body: JSON.stringify({
-        toolName,
-        arguments: toolArguments,
+        jsonrpc: '2.0',
+        id: requestId,
+        method: 'tools/call',
+        params: {
+          name: toolName,
+          arguments: toolArguments,
+        },
       }),
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`Canva MCP tool error: ${error.message || response.statusText}`);
+      const errorText = await response.text();
+      throw new Error(`Civic Hub error: ${response.status} - ${errorText}`);
     }
 
-    return await response.json();
+    const result = await response.json();
+    
+    if (result.error) {
+      throw new Error(`MCP tool error: ${result.error.message || JSON.stringify(result.error)}`);
+    }
+
+    // The result is in result.result.content for MCP responses
+    return result.result;
   } catch (error) {
     console.error(`Error calling Canva tool ${toolName}:`, error);
     throw error;
@@ -62,27 +69,55 @@ async function callCanvaTool(toolName, toolArguments, civicAuthToken) {
  * @param {string} topic - The topic to generate presentation for
  * @param {string} civicAuthToken - Civic Auth token
  * @param {string} [flashcardId] - Optional flashcard ID for context
- * @returns {Promise<{designId: string, editUrl: string}>}
+ * @returns {Promise<{designId: string, editUrl: string, viewUrl: string}>}
  */
 async function generatePresentation(topic, civicAuthToken, flashcardId = null) {
   try {
-    // Call Canva MCP tool to create a design
-    // Tool: create_design (from Canva MCP)
+    // Call Canva MCP tool to create a presentation
+    // Canva MCP tools: create_presentation, add_slide, etc.
     const result = await callCanvaTool(
-      'create_design',
+      'create_presentation',
       {
-        title: `Explanation: ${topic}`,
-        description: flashcardId ? `Generated explanation for flashcard ${flashcardId}` : `Generated explanation for ${topic}`,
-        width: 1200,
-        height: 675, // 16:9 aspect ratio for presentations
+        title: `Understanding: ${topic}`,
+        description: flashcardId 
+          ? `Auto-generated presentation to help understand ${topic}` 
+          : `Auto-generated presentation to help understand ${topic}`,
       },
       civicAuthToken
     );
 
+    // Parse the MCP response - content is typically an array
+    let designId, editUrl, viewUrl;
+    
+    if (result.content && Array.isArray(result.content)) {
+      // Look for text content with the design info
+      const textContent = result.content.find(c => c.type === 'text');
+      if (textContent) {
+        try {
+          const parsed = JSON.parse(textContent.text);
+          designId = parsed.designId || parsed.id;
+          editUrl = parsed.editUrl || parsed.urls?.edit_url;
+          viewUrl = parsed.viewUrl || parsed.urls?.view_url;
+        } catch {
+          // If not JSON, try to extract URLs from text
+          const urlMatch = textContent.text.match(/https?:\/\/[^\s]+/);
+          editUrl = urlMatch ? urlMatch[0] : null;
+        }
+      }
+    } else if (result.content && typeof result.content === 'object') {
+      designId = result.content.designId || result.content.id;
+      editUrl = result.content.editUrl || result.content.urls?.edit_url;
+      viewUrl = result.content.viewUrl || result.content.urls?.view_url;
+    }
+
+    if (!designId && !editUrl) {
+      throw new Error('Failed to get presentation details from Canva');
+    }
+
     return {
-      designId: result.designId,
-      editUrl: result.editUrl,
-      viewUrl: result.viewUrl,
+      designId: designId || `presentation-${Date.now()}`,
+      editUrl: editUrl || `https://www.canva.com/design/new`,
+      viewUrl: viewUrl || editUrl,
     };
   } catch (error) {
     console.error('Error generating presentation:', error);
@@ -91,25 +126,62 @@ async function generatePresentation(topic, civicAuthToken, flashcardId = null) {
 }
 
 /**
+ * Get available Canva MCP tools from the Civic Hub
+ * @param {string} civicAuthToken - Civic Auth token
+ * @returns {Promise<Array>} List of available tools
+ */
+async function listCanvaTools(civicAuthToken) {
+  if (!civicAuthToken) {
+    throw new Error('Civic Auth token required');
+  }
+
+  try {
+    const requestId = Date.now();
+    
+    const response = await fetch(CIVIC_HUB_MCP_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${civicAuthToken}`,
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: requestId,
+        method: 'tools/list',
+        params: {},
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Civic Hub error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.result?.tools || [];
+  } catch (error) {
+    console.error('Error listing Canva tools:', error);
+    throw error;
+  }
+}
+
+/**
  * Get design details and links
  * @param {string} designId - The design ID
  * @param {string} civicAuthToken - Civic Auth token
- * @returns {Promise<{designId: string, editUrl: string, viewUrl: string}>}
+ * @returns {Promise<{designId: string, editUrl: string, viewUrl: string, title: string}>}
  */
 async function getDesignDetails(designId, civicAuthToken) {
   try {
-    // Call Canva MCP tool to get design details
-    // Tool: get_design (from Canva MCP)
     const result = await callCanvaTool(
       'get_design',
       {
-        designId,
+        design_id: designId,
       },
       civicAuthToken
     );
 
     return {
-      designId: result.designId,
+      designId: result.designId || designId,
       editUrl: result.editUrl,
       viewUrl: result.viewUrl,
       title: result.title,
@@ -128,12 +200,10 @@ async function getDesignDetails(designId, civicAuthToken) {
  */
 async function exportDesignToPdf(designId, civicAuthToken) {
   try {
-    // Call Canva MCP tool to export design
-    // Tool: export_design (from Canva MCP)
     const result = await callCanvaTool(
       'export_design',
       {
-        designId,
+        design_id: designId,
         format: 'pdf',
       },
       civicAuthToken
@@ -154,4 +224,5 @@ export {
   generatePresentation,
   getDesignDetails,
   exportDesignToPdf,
+  listCanvaTools,
 };

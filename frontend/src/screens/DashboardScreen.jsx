@@ -177,7 +177,7 @@ export default function DashboardScreen({ onNavigate }) {
             <div className="flex gap-3 flex-wrap">
               {modules.length > 0 ? (
                 <>
-                  <Button className="flex-1 min-w-[150px]" onClick={() => onNavigate?.(SCREENS.MODULE_DETAIL, modules[0].id)}>
+                  <Button className="flex-1 min-w-[150px]" onClick={() => onNavigate?.(SCREENS.VOICE_QUIZ, modules[0].id)}>
                     🎤 Start Voice Quiz
                   </Button>
                   <Button className="flex-1 min-w-[150px]" onClick={() => onNavigate?.(SCREENS.UPLOAD_IMAGE)}>

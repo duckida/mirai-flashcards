@@ -1,386 +1,384 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
-import { apiClient } from '@/services/apiClient'
+import { Progress } from '@/components/ui/progress'
+import { voiceService } from '@/services/voiceService'
 import { quizService } from '@/services/quizService'
 
-function StatusIcon({ status }) {
-  switch (status) {
-    case 'connecting':
-      return (
-        <div className="w-20 h-20 rounded-full bg-warning-light flex items-center justify-center animate-pulse">
-          <span className="text-3xl">⏳</span>
-        </div>
-      )
-    case 'connected':
-      return (
-        <div className="w-20 h-20 rounded-full bg-success-light flex items-center justify-center">
-          <span className="text-3xl">🎙️</span>
-        </div>
-      )
-    case 'disconnected':
-      return (
-        <div className="w-20 h-20 rounded-full bg-error-light flex items-center justify-center">
-          <span className="text-3xl">📵</span>
-        </div>
-      )
-    default:
-      return (
-        <div className="w-20 h-20 rounded-full bg-bg-muted flex items-center justify-center">
-          <span className="text-3xl">🎤</span>
-        </div>
-      )
-  }
+const STATUS = {
+  IDLE: 'idle',
+  REQUESTING_MIC: 'requesting_mic',
+  CONNECTING: 'connecting',
+  CONNECTED: 'connected',
+  ENDED: 'ended',
+  ERROR: 'error',
 }
 
-function StatusLabel({ status }) {
-  switch (status) {
-    case 'connecting':
-      return <span className="text-warning font-semibold text-lg">Connecting...</span>
-    case 'connected':
-      return <span className="text-success font-semibold text-lg">Connected</span>
-    case 'disconnected':
-      return <span className="text-error font-semibold text-lg">Disconnected</span>
-    default:
-      return <span className="text-text-secondary font-semibold text-lg">Ready to connect</span>
-  }
+const MODE = {
+  AGENT_SPEAKING: 'speaking',
+  AGENT_LISTENING: 'listening',
 }
 
-function TranscriptMessage({ message }) {
-  const isAgent = message.role === 'agent'
-  return (
-    <div className={`flex ${isAgent ? 'justify-start' : 'justify-end'} mb-3`}>
-      <div
-        className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-          isAgent
-            ? 'bg-bg-muted text-text-primary rounded-bl-sm'
-            : 'bg-primary text-white rounded-br-sm'
-        }`}
-      >
-        <div className={`text-xs font-semibold mb-1 ${isAgent ? 'text-text-muted' : 'text-white/70'}`}>
-          {isAgent ? 'Agent' : 'You'}
-        </div>
-        <div className="text-sm">{message.text}</div>
-      </div>
-    </div>
-  )
-}
-
-function ReconnectDialog({ onReconnect, onEndSession }) {
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="max-w-sm w-full">
-        <CardContent className="pt-6 pb-6">
-          <div className="text-center">
-            <div className="text-3xl mb-3">⚠️</div>
-            <h3 className="text-xl font-bold text-text-primary mb-2">Connection Lost</h3>
-            <p className="text-text-secondary mb-6">
-              Your connection to the voice agent was interrupted. Would you like to reconnect or end your session?
-            </p>
-            <div className="flex gap-3">
-              <Button className="flex-1" onClick={onReconnect}>
-                Reconnect
-              </Button>
-              <Button variant="secondary" className="flex-1" onClick={onEndSession}>
-                End Session
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
-function ErrorScreen({ error, onRetry, onReturn }) {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-white p-4">
-      <Card className="max-w-md w-full">
-        <CardContent className="pt-8 pb-8">
-          <div className="text-center">
-            <div className="text-3xl mb-3">❌</div>
-            <h3 className="text-xl font-bold text-error mb-2">Connection Error</h3>
-            <p className="text-text-secondary mb-6">{error}</p>
-            <div className="flex gap-3">
-              {onRetry && (
-                <Button className="flex-1" onClick={onRetry}>
-                  Retry
-                </Button>
-              )}
-              <Button variant="secondary" className="flex-1" onClick={onReturn}>
-                Return
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
-export default function VoiceQuizScreen({ moduleId, moduleName, flashcard, userId, onBack, onComplete }) {
-  const [status, setStatus] = useState('idle')
+export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBack }) {
+  const [status, setStatus] = useState(STATUS.IDLE)
+  const [mode, setMode] = useState(null)
   const [transcript, setTranscript] = useState([])
+  const [sessionId, setSessionId] = useState(null)
   const [error, setError] = useState(null)
-  const [showReconnectDialog, setShowReconnectDialog] = useState(false)
-
-  const mountedRef = useRef(true)
+  const [isMuted, setIsMuted] = useState(false)
+  const [summary, setSummary] = useState(null)
+  const [canSendFeedback, setCanSendFeedback] = useState(false)
+  const [feedbackGiven, setFeedbackGiven] = useState(false)
   const conversationRef = useRef(null)
-  const sessionIdRef = useRef(null)
-  const intentionalEndRef = useRef(false)
-  const wasConnectedRef = useRef(false)
-  const sessionGenerationRef = useRef(0)
+  const lastAgentMessageRef = useRef(null)
 
-  const addMessage = useCallback((role, text) => {
-    if (!mountedRef.current) return
-    setTranscript((prev) => [...prev, { role, text }])
+  const addTranscript = useCallback((role, text) => {
+    setTranscript(prev => [...prev, { role, text, time: new Date().toLocaleTimeString() }])
   }, [])
 
-  const finalizeSession = useCallback(async () => {
-    const sessionId = sessionIdRef.current
-    if (!sessionId) return null
-    try {
-      await quizService.endSession(sessionId)
-      const summaryResult = await quizService.getSessionSummary(sessionId)
-      return summaryResult?.summary || null
-    } catch (err) {
-      console.error('Error finalizing session:', err)
-      return null
-    }
-  }, [])
-
-  const handleEndSession = useCallback(async () => {
-    intentionalEndRef.current = true
-    setShowReconnectDialog(false)
-
-    const conv = conversationRef.current
-    conversationRef.current = null
-    if (conv) {
-      try {
-        await conv.endSession()
-      } catch {
-        // WebSocket may already be CLOSING/CLOSED — safe to ignore
+  useEffect(() => {
+    return () => {
+      if (conversationRef.current) {
+        conversationRef.current.endSession()
+        conversationRef.current = null
       }
     }
-
-    const summary = await finalizeSession()
-    if (mountedRef.current) {
-      onComplete?.(summary)
-    }
-  }, [finalizeSession, onComplete])
-
-  const handleReconnect = useCallback(() => {
-    setShowReconnectDialog(false)
-    window.location.reload()
   }, [])
 
-  const startVoiceSession = useCallback(async () => {
-    if (!flashcard?.content?.trim()) {
-      setError('This flashcard has no content to quiz on.')
-      return
+  const handleOnMessage = useCallback((message) => {
+    if (message.type === 'user-message' && message.text) {
+      addTranscript('user', message.text)
     }
+    if (message.type === 'agent-message' && message.text) {
+      addTranscript('agent', message.text)
+      lastAgentMessageRef.current = message.text
+      setFeedbackGiven(false)
+    }
+  }, [addTranscript])
 
-    setStatus('connecting')
+  const handleOnModeChange = useCallback((newMode) => {
+    setMode(newMode)
+  }, [])
+
+  const handleOnCanSendFeedbackChange = useCallback((canSend) => {
+    setCanSendFeedback(canSend)
+  }, [])
+
+  const buildAgentContext = () => {
+    const parts = []
+    if (moduleName) {
+      parts.push(`The user is being quizzed on the topic: "${moduleName}".`)
+    }
+    if (flashcard?.content) {
+      parts.push(`The flashcard content to quiz on is:\n"${flashcard.content}"`)
+    }
+    parts.push(
+      'Ask the user a question based on the flashcard content above.',
+      'Wait for their verbal answer, then evaluate it.',
+      'Give encouraging feedback and either move to the next question or repeat if they need help.',
+      'Keep responses short and conversational.'
+    )
+    return parts.join(' ')
+  }
+
+  const startVoiceQuiz = useCallback(async () => {
     setError(null)
+    setTranscript([])
+    setSummary(null)
 
     try {
-      const micStream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      micStream.getTracks().forEach((t) => t.stop())
-    } catch {
-      if (mountedRef.current) {
-        setError('Microphone permission is required for voice quizzes. Please allow microphone access and try again.')
-        setStatus('idle')
-      }
+      await navigator.mediaDevices.getUserMedia({ audio: true })
+      setStatus(STATUS.REQUESTING_MIC)
+    } catch (err) {
+      setError('Microphone access denied. Please allow microphone access and try again.')
+      setStatus(STATUS.ERROR)
       return
     }
 
-    const generation = ++sessionGenerationRef.current
-
     try {
-      const tokenResult = await apiClient.post('/api/quiz/speech-token', {
-        content: flashcard.content,
-        moduleName: moduleName || 'General',
-      })
-
-      if (!mountedRef.current || sessionGenerationRef.current !== generation) return
-
-      const { signedUrl } = tokenResult
-
-      const sessionResult = await quizService.startSession(userId, moduleId, 'voice')
-      if (mountedRef.current && sessionGenerationRef.current === generation && sessionResult?.session?.id) {
-        sessionIdRef.current = sessionResult.session.id
-      }
-
-      if (!mountedRef.current || sessionGenerationRef.current !== generation) return
-
       const { Conversation } = await import('@elevenlabs/client')
+      setStatus(STATUS.CONNECTING)
+
+      const signedUrl = await voiceService.getSignedUrl()
 
       const conversation = await Conversation.startSession({
         signedUrl,
         connectionType: 'websocket',
-        overrides: {
-          agent: {
-            prompt: {
-              prompt: `You are a helpful quiz assistant for the "${moduleName || 'General'}" module. Quiz the user on this flashcard content: "${flashcard.content}". Read the question, wait for their response, and provide encouraging feedback. Keep responses concise.`,
-            },
-            firstMessage: `Hello! Let's study the "${moduleName || 'General'}" module. Here's your first question based on the flashcard: ${flashcard.content}`,
-          },
-        },
         onConnect: () => {
-          if (!mountedRef.current || sessionGenerationRef.current !== generation) return
-          wasConnectedRef.current = true
-          setStatus('connected')
+          setStatus(STATUS.CONNECTED)
         },
         onDisconnect: () => {
-          if (!mountedRef.current || sessionGenerationRef.current !== generation) return
-          if (wasConnectedRef.current && !intentionalEndRef.current) {
-            setShowReconnectDialog(true)
-          }
-          setStatus('disconnected')
+          setStatus(STATUS.ENDED)
         },
-        onMessage: (message) => {
-          if (!mountedRef.current || sessionGenerationRef.current !== generation) return
-          if (message.source === 'user') {
-            addMessage('user', message.message)
-          } else {
-            addMessage('agent', message.message)
-          }
-        },
+        onMessage: handleOnMessage,
         onError: (err) => {
-          console.error('ElevenLabs error:', err)
-          if (!mountedRef.current || sessionGenerationRef.current !== generation) return
-          setError('An error occurred with the voice connection. Please try again.')
-          setStatus('disconnected')
+          console.error('Conversation error:', err)
+          setError(`Voice agent error: ${err?.message || err}`)
+          setStatus(STATUS.ERROR)
         },
         onStatusChange: (newStatus) => {
-          if (!mountedRef.current || sessionGenerationRef.current !== generation) return
-          if (newStatus === 'connecting') setStatus('connecting')
-          else if (newStatus === 'connected') setStatus('connected')
-          else if (newStatus === 'disconnected') {
-            if (wasConnectedRef.current && !intentionalEndRef.current) {
-              setShowReconnectDialog(true)
-            }
-            setStatus('disconnected')
+          if (newStatus === 'disconnected') {
+            setStatus(STATUS.ENDED)
           }
         },
+        onModeChange: handleOnModeChange,
+        onCanSendFeedbackChange: handleOnCanSendFeedbackChange,
       })
 
-      if (!mountedRef.current || sessionGenerationRef.current !== generation) {
-        return
-      }
-
       conversationRef.current = conversation
+
+      const id = conversation.getId()
+      setSessionId(id)
+
+      conversation.sendContextualUpdate(buildAgentContext())
+      
+      // Trigger agent to start the conversation
+      conversation.sendUserMessage('Hello, please start the quiz.')
     } catch (err) {
-      if (!mountedRef.current || sessionGenerationRef.current !== generation) return
-      console.error('Failed to start voice session:', err)
-      setError(err.message || 'Failed to connect to the voice agent. Please try again.')
-      setStatus('idle')
+      console.error('Failed to start voice conversation:', err)
+      setError(`Failed to start voice quiz: ${err.message}`)
+      setStatus(STATUS.ERROR)
     }
-  }, [flashcard, moduleName, userId, moduleId, addMessage])
+  }, [handleOnMessage, handleOnModeChange, handleOnCanSendFeedbackChange])
 
-  useEffect(() => {
-    mountedRef.current = true
-    return () => {
-      mountedRef.current = false
+  const endSession = useCallback(async () => {
+    if (conversationRef.current) {
+      conversationRef.current.endSession()
       conversationRef.current = null
-      sessionIdRef.current = null
-      intentionalEndRef.current = false
-      wasConnectedRef.current = false
     }
-  }, [])
+    setStatus(STATUS.ENDED)
 
-  useEffect(() => {
-    if (flashcard?.content?.trim()) {
-      startVoiceSession()
-    } else {
-      setError('This flashcard has no content to quiz on.')
+    if (sessionId) {
+      try {
+        const result = await quizService.endSession(sessionId)
+        setSummary(result)
+      } catch (err) {
+        console.error('Failed to end session:', err)
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [flashcard?.id])
+  }, [sessionId])
 
-  if (error && status === 'idle') {
-    return <ErrorScreen error={error} onRetry={flashcard?.content?.trim() ? startVoiceSession : null} onReturn={onBack} />
-  }
+  const handleSendFeedback = useCallback(async (isPositive) => {
+    if (conversationRef.current && !feedbackGiven) {
+      conversationRef.current.sendFeedback(isPositive)
+      setFeedbackGiven(true)
+    }
+  }, [feedbackGiven])
+
+  const handleToggleMute = useCallback(() => {
+    if (conversationRef.current) {
+      const newMuted = !isMuted
+      conversationRef.current.setMicMuted(newMuted)
+      setIsMuted(newMuted)
+    }
+  }, [isMuted])
+
+  const isActive = status === STATUS.CONNECTED || status === STATUS.CONNECTING
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-white">
       <header className="flex items-center justify-between p-5 border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-primary-lighter flex items-center justify-center text-xl">🎤</div>
+          <div className="w-10 h-10 rounded-2xl bg-primary-lighter flex items-center justify-center text-xl">
+            🎤
+          </div>
           <div>
-            <h1 className="text-xl font-extrabold text-text-primary">Voice Quiz</h1>
-            <p className="text-sm text-text-secondary">{moduleName || 'Module'}</p>
+            <h1 className="text-2xl font-extrabold text-text-primary tracking-tight">Voice Quiz</h1>
+            <p className="text-sm text-text-secondary">{moduleName || 'Voice Practice'}</p>
           </div>
         </div>
-        <Button variant="secondary" size="sm" onClick={onBack}>
-          ← Back
-        </Button>
+        <Button variant="secondary" size="sm" onClick={onBack}>Back</Button>
       </header>
 
-      <main className="flex-1 flex flex-col p-4 max-w-2xl mx-auto w-full">
+      <main className="p-4 max-w-2xl mx-auto">
+        {error && (
+          <Card className="mb-4 bg-error-light border-error">
+            <CardContent className="pt-4">
+              <div className="flex items-start gap-2">
+                <span>⚠️</span>
+                <div>
+                  <p className="text-error font-semibold">Error</p>
+                  <p className="text-error text-sm mt-1">{error}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {summary && (
+          <Card className="mb-4 bg-success-light border-success">
+            <CardHeader>
+              <CardTitle className="text-success">Quiz Complete!</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <div className="text-2xl font-bold text-text-primary">{summary.totalQuestions}</div>
+                  <div className="text-xs text-text-secondary">Questions</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-success">{summary.correct}</div>
+                  <div className="text-xs text-text-secondary">Correct</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-error">{summary.incorrect}</div>
+                  <div className="text-xs text-text-secondary">Incorrect</div>
+                </div>
+              </div>
+              <div className="mt-4">
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-text-secondary">Accuracy</span>
+                  <span className="font-semibold">{summary.accuracy}%</span>
+                </div>
+                <Progress value={summary.accuracy} indicatorClassName="bg-success" />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <Card className="mb-4">
-          <CardContent className="pt-6 pb-6">
-            <div className="flex flex-col items-center gap-4">
-              <StatusIcon status={status} />
-              <StatusLabel status={status} />
-              {status === 'connected' && (
-                <p className="text-text-muted text-sm">Speak your answer to the agent</p>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {status === STATUS.CONNECTED ? (
+                mode === MODE.AGENT_SPEAKING ? '🔊 Agent Speaking' : '🎙️ Listening...'
+              ) : status === STATUS.CONNECTING ? (
+                '⏳ Connecting...'
+              ) : status === STATUS.ENDED ? (
+                '✅ Session Ended'
+              ) : (
+                '🎤 Voice Agent'
               )}
-            </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {status === STATUS.IDLE && (
+              <div className="flex flex-col items-center gap-4 py-6">
+                {flashcard?.sourceImageUrl && (
+                  <div className="w-full rounded-xl overflow-hidden bg-bg-muted">
+                    <img 
+                      src={flashcard.sourceImageUrl} 
+                      alt="Flashcard" 
+                      className="w-full max-w-md mx-auto"
+                    />
+                  </div>
+                )}
+                <p className="text-text-secondary text-center">
+                  Practice with a voice agent. The agent will quiz you based on the flashcard image.
+                </p>
+                <Button size="lg" onClick={startVoiceQuiz}>
+                  🎤 Start Voice Quiz
+                </Button>
+              </div>
+            )}
+
+            {(status === STATUS.REQUESTING_MIC || status === STATUS.CONNECTING) && (
+              <div className="flex flex-col items-center gap-4 py-6">
+                <Spinner size="lg" />
+                <p className="text-text-secondary">
+                  {status === STATUS.REQUESTING_MIC ? 'Requesting microphone access...' : 'Connecting to voice agent...'}
+                </p>
+              </div>
+            )}
+
+            {isActive && (
+              <div className="flex flex-col items-center gap-6 py-6">
+                <style>{`
+                  @keyframes pulse-ring {
+                    0% { transform: scale(0.95); opacity: 0.7; }
+                    50% { transform: scale(1.05); opacity: 0.4; }
+                    100% { transform: scale(0.95); opacity: 0.7; }
+                  }
+                  @keyframes pulse-dot {
+                    0% { transform: scale(1); }
+                    50% { transform: scale(1.1); }
+                    100% { transform: scale(1); }
+                  }
+                `}</style>
+                
+                <div className="relative">
+                  <div 
+                    className={`absolute inset-0 rounded-full ${mode === MODE.AGENT_SPEAKING ? 'bg-primary' : 'bg-success'}`}
+                    style={{ 
+                      animation: 'pulse-ring 2s ease-in-out infinite',
+                      opacity: 0.3 
+                    }}
+                  />
+                  <div 
+                    className={`relative w-32 h-32 rounded-full flex items-center justify-center ${
+                      mode === MODE.AGENT_SPEAKING 
+                        ? 'bg-primary' 
+                        : 'bg-success'
+                    }`}
+                    style={{ animation: 'pulse-dot 2s ease-in-out infinite' }}
+                  >
+                    <span className="text-5xl">
+                      {mode === MODE.AGENT_SPEAKING ? '🔊' : '🎙️'}
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-lg font-semibold text-text-primary">
+                  {mode === MODE.AGENT_SPEAKING ? 'Agent is speaking...' : 'Listening...'}
+                </p>
+
+                <div className="flex items-center gap-3 w-full max-w-xs">
+                  <Button
+                    variant={isMuted ? 'destructive' : 'secondary'}
+                    onClick={handleToggleMute}
+                    className="flex-1"
+                  >
+                    {isMuted ? '🔇 Unmute' : '🎙️ Mute'}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={endSession}
+                    className="flex-1"
+                  >
+                    End
+                  </Button>
+                </div>
+
+                {canSendFeedback && !feedbackGiven && lastAgentMessageRef.current && (
+                  <div className="flex gap-2 w-full max-w-xs">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleSendFeedback(true)}
+                    >
+                      👍 Good
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleSendFeedback(false)}
+                    >
+                      👎 Poor
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {status === STATUS.ERROR && (
+              <div className="flex flex-col items-center gap-4 py-6">
+                <p className="text-error text-center">{error}</p>
+                <Button onClick={() => setStatus(STATUS.IDLE)}>Try Again</Button>
+              </div>
+            )}
+
+            {status === STATUS.ENDED && !summary && (
+              <div className="flex flex-col items-center gap-4 py-6">
+                <p className="text-text-secondary text-center">Session ended.</p>
+                <Button onClick={startVoiceQuiz}>Start New Session</Button>
+              </div>
+            )}
           </CardContent>
         </Card>
-
-        {flashcard?.content && (
-          <Card className="mb-4 border-primary/30">
-            <CardContent className="pt-4 pb-4">
-              <div className="text-xs font-semibold text-text-muted mb-1">Current Flashcard</div>
-              <p className="text-sm text-text-primary">{flashcard.content}</p>
-            </CardContent>
-          </Card>
-        )}
-
-        <div className="flex-1 overflow-y-auto mb-4 min-h-[200px]">
-          {transcript.length === 0 ? (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-text-muted text-sm">
-                {status === 'connected' ? 'Waiting for conversation...' : 'Conversation will appear here'}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-1">
-              {transcript.map((msg, i) => (
-                <TranscriptMessage key={i} message={msg} />
-              ))}
-            </div>
-          )}
-        </div>
-
-        {error && status !== 'idle' && (
-          <Card className="mb-4 border-error/30 bg-error-light/50">
-            <CardContent className="pt-3 pb-3">
-              <p className="text-error text-sm">{error}</p>
-            </CardContent>
-          </Card>
-        )}
-
-        <div className="flex gap-3">
-          {status === 'connected' && (
-            <Button variant="destructive" className="flex-1" size="lg" onClick={handleEndSession}>
-              End
-            </Button>
-          )}
-          {(status === 'disconnected' || status === 'idle') && !error && (
-            <Button variant="secondary" className="flex-1" size="lg" onClick={onBack}>
-              Return
-            </Button>
-          )}
-        </div>
       </main>
-
-      {showReconnectDialog && (
-        <ReconnectDialog onReconnect={handleReconnect} onEndSession={handleEndSession} />
-      )}
     </div>
   )
 }

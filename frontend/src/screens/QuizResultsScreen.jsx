@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Spinner } from '@/components/ui/spinner'
 import { canvaService } from '@/services/canvaService'
+import useAuth from '@/hooks/useAuth'
 
 function ScoreChangeItem({ flashcardId, result, flashcards }) {
   const flashcard = flashcards?.find((fc) => fc.id === flashcardId)
@@ -42,19 +43,20 @@ function ScoreChangeItem({ flashcardId, result, flashcards }) {
 }
 
 export default function QuizResultsScreen({ summary, flashcards, moduleId, moduleName, onNavigate, onReviewWeak }) {
+  const { user } = useAuth()
   const [showDetails, setShowDetails] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [presentationResult, setPresentationResult] = useState(null)
   const [presentationError, setPresentationError] = useState(null)
   const [showModal, setShowModal] = useState(false)
 
-  const handleHelpMeUnderstand = useCallback(async () => {
+  const handleGeneratePresentation = useCallback(async () => {
     if (!moduleName) return
     setIsGenerating(true)
     setPresentationError(null)
     setPresentationResult(null)
     try {
-      const result = await canvaService.requestPresentation(moduleName)
+      const result = await canvaService.requestPresentation(moduleName, moduleId, user?.id)
       setPresentationResult(result)
       setShowModal(true)
     } catch (err) {
@@ -63,7 +65,7 @@ export default function QuizResultsScreen({ summary, flashcards, moduleId, modul
     } finally {
       setIsGenerating(false)
     }
-  }, [moduleName])
+  }, [moduleName, moduleId, user?.id])
 
   if (!summary) {
     return (
@@ -77,7 +79,6 @@ export default function QuizResultsScreen({ summary, flashcards, moduleId, modul
   }
 
   const accuracy = summary.accuracy || 0
-  const accuracyColor = accuracy >= 70 ? 'text-success' : accuracy >= 40 ? 'text-warning' : 'text-error'
   const progressColor = accuracy >= 70 ? 'bg-success' : accuracy >= 40 ? 'bg-warning' : 'bg-error'
   const duration = summary.duration || 0
   const minutes = Math.floor(duration / 60)
@@ -178,9 +179,9 @@ export default function QuizResultsScreen({ summary, flashcards, moduleId, modul
           className="w-full"
           size="lg"
           disabled={!moduleName || isGenerating}
-          onClick={handleHelpMeUnderstand}
+          onClick={handleGeneratePresentation}
         >
-          {isGenerating ? '⏳ Generating...' : '✨ Help me understand'}
+          {isGenerating ? '⏳ Generating...' : '✨ Generate Presentation'}
         </Button>
 
         {showModal && (
@@ -194,7 +195,7 @@ export default function QuizResultsScreen({ summary, flashcards, moduleId, modul
                     <p className="text-text-secondary mb-4">{presentationError}</p>
                     <div className="flex gap-3">
                       <Button variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>Close</Button>
-                      <Button className="flex-1" onClick={handleHelpMeUnderstand}>Retry</Button>
+                      <Button className="flex-1" onClick={handleGeneratePresentation}>Retry</Button>
                     </div>
                   </div>
                 ) : isGenerating ? (

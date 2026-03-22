@@ -1,28 +1,25 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Spinner } from '@/components/ui/spinner'
-import useAuth from '@/hooks/useAuth'
+
 import { moduleService } from '@/services/moduleService'
 
-function FlashcardCard({ flashcard, isExpanded, onToggle, onVoiceQuiz, onTextQuiz }) {
+function FlashcardCard({ flashcard, onVoiceQuiz, onTextQuiz }) {
   const score = flashcard.knowledgeScore || 0
   const variant = score >= 70 ? 'success' : score >= 40 ? 'warning' : 'error'
   const color = score >= 70 ? 'bg-success' : score >= 40 ? 'bg-warning' : 'bg-error'
 
   return (
-    <Card className={`mb-3 transition-all ${isExpanded ? 'border-primary border-2' : ''}`}>
+    <Card className="mb-3 transition-all">
       <CardContent className="pt-4 pb-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Badge variant={variant}>{score}%</Badge>
             <span className="text-xs text-text-muted">Knowledge Score</span>
           </div>
-          <Button variant="secondary" size="sm" onClick={() => onToggle(flashcard.id)}>
-            {isExpanded ? '🙈 Hide' : '👁️ Show'}
-          </Button>
         </div>
 
         {flashcard.sourceImageUrl && (
@@ -69,11 +66,9 @@ function FlashcardCard({ flashcard, isExpanded, onToggle, onVoiceQuiz, onTextQui
 }
 
 export default function ModuleDetailScreen({ moduleId, onBack, onNavigate }) {
-  const { user } = useAuth()
   const [module, setModule] = useState(null)
   const [flashcards, setFlashcards] = useState([])
   const [isLoading, setIsLoading] = useState(true)
-  const [expandedCardId, setExpandedCardId] = useState(null)
 
   useEffect(() => {
     if (!moduleId) return
@@ -156,8 +151,6 @@ export default function ModuleDetailScreen({ moduleId, onBack, onNavigate }) {
               <FlashcardCard
                 key={card.id}
                 flashcard={card}
-                isExpanded={expandedCardId === card.id}
-                onToggle={(id) => setExpandedCardId(expandedCardId === id ? null : id)}
                 onVoiceQuiz={(card) => onNavigate?.('voice_quiz', moduleId, card, module?.name)}
                 onTextQuiz={(card) => onNavigate?.('text_quiz', moduleId, card, module?.name)}
               />

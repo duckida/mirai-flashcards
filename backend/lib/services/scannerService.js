@@ -17,7 +17,7 @@ import { gateway, generateText } from 'ai';
  * Configuration for Vercel AI Gateway
  */
 const GATEWAY_CONFIG = {
-  model: process.env.VISION_MODEL || 'qwen/qwen3.5-flash',
+  model: process.env.VISION_MODEL || 'google/gemini-3-flash',
   maxTokens: 4096,
 };
 

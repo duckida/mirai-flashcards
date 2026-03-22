@@ -8,15 +8,13 @@ import { apiClient } from '@/services/apiClient'
 import { moduleService } from '@/services/moduleService'
 import QuizResultsScreen from './QuizResultsScreen'
 
-export default function ImageQuizScreen({ moduleId, flashcard, onBack, onNavigate }) {
+export default function ImageQuizScreen({ moduleId, flashcard, onBack }) {
   const [module, setModule] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [userAnswer, setUserAnswer] = useState('')
   const [isAnswered, setIsAnswered] = useState(false)
   const [feedback, setFeedback] = useState(null)
-  const [showAnswer, setShowAnswer] = useState(false)
-  const [summary, setSummary] = useState(null)
 
   const isSingleCard = !!flashcard
 

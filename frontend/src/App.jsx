@@ -4,19 +4,19 @@ import AuthScreen from './screens/AuthScreen'
 import DashboardScreen from './screens/DashboardScreen'
 import UploadImageScreen from './screens/UploadImageScreen'
 import ModuleDetailScreen from './screens/ModuleDetailScreen'
-import VoiceQuizScreen from './screens/VoiceQuizScreen'
 import ImageQuizScreen from './screens/ImageQuizScreen'
 import MultipleChoiceQuizScreen from './screens/MultipleChoiceQuizScreen'
 import QuizResultsScreen from './screens/QuizResultsScreen'
 import SettingsScreen from './screens/SettingsScreen'
+import VoiceQuizScreen from './screens/VoiceQuizScreen'
 
 const SCREENS = {
   DASHBOARD: 'dashboard',
   UPLOAD_IMAGE: 'upload_image',
   MODULE_DETAIL: 'module_detail',
-  VOICE_QUIZ: 'voice_quiz',
   IMAGE_QUIZ: 'image_quiz',
   TEXT_QUIZ: 'text_quiz',
+  VOICE_QUIZ: 'voice_quiz',
   SETTINGS: 'settings',
   QUIZ_RESULTS: 'quiz_results',
 }
@@ -26,7 +26,7 @@ function AppContent() {
   const [currentScreen, setCurrentScreen] = useState(SCREENS.DASHBOARD)
   const [selectedModuleId, setSelectedModuleId] = useState(null)
   const [selectedFlashcard, setSelectedFlashcard] = useState(null)
-  // Task 2.5: Track module name so VoiceQuizScreen gets it without a secondary fetch
+  // Task 2.5: Track module name so quiz screens get it without a secondary fetch
   const [selectedModuleName, setSelectedModuleName] = useState(null)
   // Task 4.6: Track quiz summary for results screen
   const [quizSummary, setQuizSummary] = useState(null)
@@ -56,8 +56,7 @@ function AppContent() {
 
   // Only show the global loading screen on first load (no user yet).
   // If we already have a user and Civic does a background token refresh,
-  // isLoading briefly flips true — don't unmount the active screen (especially
-  // VoiceQuizScreen which holds a live WebSocket).
+  // isLoading briefly flips true — don't unmount the active screen.
   if (isLoading && !user) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white gap-4">
@@ -76,18 +75,6 @@ function AppContent() {
       return <SettingsScreen onBack={goBack} />
     case SCREENS.MODULE_DETAIL:
       return <ModuleDetailScreen moduleId={selectedModuleId} onBack={goBack} onNavigate={navigateTo} />
-    case SCREENS.VOICE_QUIZ:
-      return (
-        <VoiceQuizScreen
-          moduleId={selectedModuleId}
-          moduleName={selectedModuleName}
-          flashcard={selectedFlashcard}
-          userId={user?.id}
-          onBack={goToModule}
-          onComplete={(summary) => navigateTo(SCREENS.QUIZ_RESULTS, selectedModuleId, null, selectedModuleName, summary)}
-          onNavigate={navigateTo}
-        />
-      )
     case SCREENS.IMAGE_QUIZ:
       return <ImageQuizScreen moduleId={selectedModuleId} onBack={goBack} onNavigate={navigateTo} />
     case SCREENS.TEXT_QUIZ:
@@ -98,6 +85,16 @@ function AppContent() {
           flashcard={selectedFlashcard}
           onBack={goToModule}
           onComplete={(summary) => navigateTo(SCREENS.QUIZ_RESULTS, selectedModuleId, null, selectedModuleName, summary)}
+          onNavigate={navigateTo}
+        />
+      )
+    case SCREENS.VOICE_QUIZ:
+      return (
+        <VoiceQuizScreen
+          moduleId={selectedModuleId}
+          flashcard={selectedFlashcard}
+          moduleName={selectedModuleName}
+          onBack={goToModule}
           onNavigate={navigateTo}
         />
       )

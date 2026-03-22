@@ -14,7 +14,7 @@ import { generateQuizImage } from './imageService.js';
 
 const db = getFirestore();
 
-const AI_MODEL = process.env.CLASSIFICATION_MODEL || 'qwen/qwen3.5-flash';
+const AI_MODEL = process.env.CLASSIFICATION_MODEL || 'google/gemini-3.1-flash-lite-preview';
 
 // ============================================================
 // Exercise type constants
@@ -314,9 +314,10 @@ export async function getNextQuestion(sessionId) {
     if (session.currentFlashcardIndex >= session.preGeneratedQuestions.length) return null;
 
     const question = session.preGeneratedQuestions[session.currentFlashcardIndex];
-    
+
     await db.collection('quiz_sessions').doc(sessionId).update({
       currentFlashcardIndex: session.currentFlashcardIndex + 1,
+      lastQuestion: question.question,
     });
 
     return {
@@ -394,11 +395,11 @@ export async function getNextQuestion(sessionId) {
       question = await generateMultipleChoiceQuestion(flashcard, moduleFlashcards);
       break;
     case 'fill_in_blank':
-      question = generateFillInTheBlankQuestion(flashcard);
+      question = await generateFillInTheBlankQuestion(flashcard);
       break;
     case 'free_recall':
     default:
-      question = generateFreeRecallQuestion(flashcard);
+      question = await generateFreeRecallQuestion(flashcard);
       break;
   }
 
@@ -412,9 +413,10 @@ export async function getNextQuestion(sessionId) {
     question.imageUrl = imageUrl; // May be null if generation failed (graceful degradation)
   }
 
-  // Advance session index
+  // Advance session index and store last question for evaluation context
   await db.collection('quiz_sessions').doc(sessionId).update({
     currentFlashcardIndex: session.currentFlashcardIndex + 1,
+    lastQuestion: question.question,
   });
 
   return {
@@ -481,7 +483,7 @@ async function generateQuestionFromContent(flashcard, type) {
   try {
     const { object } = await generateObject({
       model: gateway(AI_MODEL),
-      system: `You are a quiz generator. Given raw study material content, generate a quiz question and its correct answer.
+      system: `You are a quiz generator. Given raw study material content, generate a quiz question and its correct answer in JSON format.
 
 Rules:
 1. The question should test understanding of the most important concept in the content
@@ -630,7 +632,7 @@ async function generateMultipleChoiceQuestionsBatch(flashcard, count = 8) {
   try {
     const { object } = await generateObject({
       model: gateway(AI_MODEL),
-      system: `You are creating a multiple-choice quiz from study material content.
+      system: `You are creating a multiple-choice quiz from study material content. Output JSON.
 
 Rules:
 1. Generate exactly ${count} distinct multiple-choice questions testing understanding of the content.
@@ -689,7 +691,7 @@ async function generateMultipleChoiceQuestion(flashcard, moduleFlashcards) {
   try {
     const { object } = await generateObject({
       model: gateway(AI_MODEL),
-      system: `You are creating a multiple-choice quiz question from study material content.
+      system: `You are creating a multiple-choice quiz question from study material content. Output JSON.
 
 Rules:
 1. Generate a question that tests understanding of the key concept
@@ -781,7 +783,7 @@ async function evaluateWithAI(content, userAnswer, question) {
   try {
     const { object } = await generateObject({
       model: gateway(AI_MODEL),
-      system: `You are an expert quiz evaluator. Evaluate the user's answer against the original study material.
+      system: `You are an expert quiz evaluator. Evaluate the user's answer against the original study material and return the result as JSON.
 
 Rules:
 1. Determine if the user's answer demonstrates understanding of the key concepts
