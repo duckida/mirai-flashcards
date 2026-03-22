@@ -7,6 +7,8 @@ import { evaluateResponse } from '@/lib/services/quizEngineService.js';
 import { apiHandler } from '@/lib/api/middleware.js';
 import { errorResponse, successResponse } from '@/lib/api/errorHandler.js';
 
+export const maxDuration = 30;
+
 export const POST = apiHandler(async (request, { params }) => {
   const { sessionId } = await params;
 
