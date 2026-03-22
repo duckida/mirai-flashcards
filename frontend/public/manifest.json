@@ -1,0 +1,27 @@
+{
+  "name": "Mirai",
+  "short_name": "Mirai",
+  "description": "AI-powered flashcard learning app that digitizes physical notes and provides interactive quiz experiences",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#6366f1",
+  "orientation": "any",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "lang": "en-US",
+  "dir": "ltr"
+}

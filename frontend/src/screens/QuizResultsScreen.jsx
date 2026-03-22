@@ -1,11 +1,8 @@
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { Spinner } from '@/components/ui/spinner'
-import { canvaService } from '@/services/canvaService'
-import useAuth from '@/hooks/useAuth'
 
 function ScoreChangeItem({ flashcardId, result, flashcards }) {
   const flashcard = flashcards?.find((fc) => fc.id === flashcardId)
@@ -43,29 +40,7 @@ function ScoreChangeItem({ flashcardId, result, flashcards }) {
 }
 
 export default function QuizResultsScreen({ summary, flashcards, moduleId, moduleName, onNavigate, onReviewWeak }) {
-  const { user } = useAuth()
   const [showDetails, setShowDetails] = useState(false)
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [presentationResult, setPresentationResult] = useState(null)
-  const [presentationError, setPresentationError] = useState(null)
-  const [showModal, setShowModal] = useState(false)
-
-  const handleGeneratePresentation = useCallback(async () => {
-    if (!moduleName) return
-    setIsGenerating(true)
-    setPresentationError(null)
-    setPresentationResult(null)
-    try {
-      const result = await canvaService.requestPresentation(moduleName, moduleId, user?.id)
-      setPresentationResult(result)
-      setShowModal(true)
-    } catch (err) {
-      setPresentationError(err.message || 'Failed to generate presentation')
-      setShowModal(true)
-    } finally {
-      setIsGenerating(false)
-    }
-  }, [moduleName, moduleId, user?.id])
 
   if (!summary) {
     return (
@@ -173,55 +148,6 @@ export default function QuizResultsScreen({ summary, flashcards, moduleId, modul
             </Button>
           )}
         </div>
-
-        <Button
-          variant="secondary"
-          className="w-full"
-          size="lg"
-          disabled={!moduleName || isGenerating}
-          onClick={handleGeneratePresentation}
-        >
-          {isGenerating ? '⏳ Generating...' : '✨ Generate Presentation'}
-        </Button>
-
-        {showModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <Card className="max-w-md w-full">
-              <CardContent className="pt-6 pb-6">
-                {presentationError ? (
-                  <div className="text-center">
-                    <div className="text-3xl mb-3">❌</div>
-                    <h3 className="text-xl font-bold text-error mb-2">Generation Failed</h3>
-                    <p className="text-text-secondary mb-4">{presentationError}</p>
-                    <div className="flex gap-3">
-                      <Button variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>Close</Button>
-                      <Button className="flex-1" onClick={handleGeneratePresentation}>Retry</Button>
-                    </div>
-                  </div>
-                ) : isGenerating ? (
-                  <div className="text-center py-4">
-                    <Spinner size="lg" className="mx-auto mb-4" />
-                    <p className="text-text-secondary">Generating presentation...</p>
-                  </div>
-                ) : (
-                  <div className="text-center">
-                    <div className="text-3xl mb-3">✅</div>
-                    <h3 className="text-xl font-bold text-success mb-2">Presentation Ready!</h3>
-                    <p className="text-text-secondary mb-4">Your presentation for "{moduleName}" is ready.</p>
-                    <div className="flex gap-3">
-                      {presentationResult?.editUrl && (
-                        <Button className="flex-1" onClick={() => window.open(presentationResult.editUrl, '_blank')}>
-                          📝 Open in Canva
-                        </Button>
-                      )}
-                      <Button variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>Close</Button>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        )}
       </main>
     </div>
   )

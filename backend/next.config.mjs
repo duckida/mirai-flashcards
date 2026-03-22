@@ -13,16 +13,7 @@ const withCivicAuth = createCivicAuthPlugin({
   callbackUrl: "/api/auth/callback",
   loginUrl: "/",
   logoutUrl: frontendUrl,
-  exclude: [
-    "/",
-    "/api/auth/*",
-    "/api/quiz/*",
-    "/api/flashcards/*",
-    "/api/modules/*",
-    "/api/user/*",
-    "/_next/*",
-    "/favicon.ico"
-  ],
+  exclude: ["/", "/api/*", "/_next/*", "/favicon.ico"],
 });
 
 export default withCivicAuth(nextConfig);
