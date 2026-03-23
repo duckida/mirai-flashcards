@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Spinner } from '@/components/ui/spinner'
+import { Input } from '@/components/ui/input'
 
 import { moduleService } from '@/services/moduleService'
 import { flashcardService } from '@/services/flashcardService'
@@ -79,6 +80,15 @@ export default function ModuleDetailScreen({ moduleId, onBack, onNavigate }) {
   const [flashcards, setFlashcards] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [deletingId, setDeletingId] = useState(null)
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const filteredFlashcards = useMemo(() => {
+    if (!searchQuery.trim()) return flashcards
+    const q = searchQuery.toLowerCase()
+    return flashcards.filter((card) =>
+      (card.content || '').toLowerCase().includes(q)
+    )
+  }, [flashcards, searchQuery])
 
   useEffect(() => {
     if (!moduleId) return
@@ -170,15 +180,38 @@ export default function ModuleDetailScreen({ moduleId, onBack, onNavigate }) {
 
         <div className="mb-4">
           <h2 className="text-xl font-bold text-text-primary mb-3 flex items-center gap-2">
-            <span>📝</span> Flashcards ({flashcards.length})
+            <span>📝</span> Flashcards
+            {searchQuery.trim() && (
+              <span className="text-sm font-normal text-text-secondary">
+                ({filteredFlashcards.length} of {flashcards.length} {filteredFlashcards.length === 1 ? 'card' : 'cards'})
+              </span>
+            )}
           </h2>
-          {flashcards.length === 0 ? (
+
+          <div className="relative mb-3">
+            <Input
+              type="text"
+              placeholder="Search flashcards..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+
+          {filteredFlashcards.length === 0 ? (
             <div className="py-10 text-center bg-bg-muted rounded-2xl">
-              <div className="text-3xl mb-3">📝</div>
-              <p className="text-text-secondary">No flashcards in this module yet.</p>
+              <div className="text-3xl mb-3">{flashcards.length === 0 ? '📝' : '🔍'}</div>
+              <p className="text-text-secondary">
+                {flashcards.length === 0
+                  ? 'No flashcards in this module yet.'
+                  : 'No cards match your search.'}
+              </p>
             </div>
           ) : (
-            flashcards.map((card) => (
+            filteredFlashcards.map((card) => (
               <FlashcardCard
                 key={card.id}
                 flashcard={card}

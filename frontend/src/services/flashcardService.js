@@ -38,4 +38,26 @@ export const flashcardService = {
   async deleteFlashcard(flashcardId) {
     return apiClient.delete(`/api/flashcards/${flashcardId}`)
   },
+
+  async getAllUserFlashcards(userId) {
+    const modulesData = await apiClient.get(`/api/modules?userId=${userId}`)
+    const modules = modulesData.modules || []
+    if (modules.length === 0) return []
+
+    const flashcardResults = await Promise.all(
+      modules.map(async (mod) => {
+        try {
+          const data = await apiClient.get(`/api/flashcards/${mod.id}`)
+          return (data.flashcards || []).map((card) => ({
+            ...card,
+            moduleName: mod.name,
+            moduleColor: mod.color || '#9333EA',
+          }))
+        } catch {
+          return []
+        }
+      })
+    )
+    return flashcardResults.flat()
+  },
 }
