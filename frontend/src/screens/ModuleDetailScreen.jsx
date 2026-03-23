@@ -6,8 +6,9 @@ import { Progress } from '@/components/ui/progress'
 import { Spinner } from '@/components/ui/spinner'
 
 import { moduleService } from '@/services/moduleService'
+import { flashcardService } from '@/services/flashcardService'
 
-function FlashcardCard({ flashcard, onVoiceQuiz, onTextQuiz }) {
+function FlashcardCard({ flashcard, onVoiceQuiz, onTextQuiz, onDelete, isDeleting }) {
   const score = flashcard.knowledgeScore || 0
   const variant = score >= 70 ? 'success' : score >= 40 ? 'warning' : 'error'
   const color = score >= 70 ? 'bg-success' : score >= 40 ? 'bg-warning' : 'bg-error'
@@ -59,6 +60,14 @@ function FlashcardCard({ flashcard, onVoiceQuiz, onTextQuiz }) {
           >
             📝 Text Quiz
           </Button>
+          <Button 
+            variant="destructive" 
+            size="sm"
+            onClick={() => onDelete?.(flashcard)}
+            disabled={isDeleting}
+          >
+            {isDeleting ? 'Deleting...' : 'Delete'}
+          </Button>
         </div>
       </CardContent>
     </Card>
@@ -69,6 +78,7 @@ export default function ModuleDetailScreen({ moduleId, onBack, onNavigate }) {
   const [module, setModule] = useState(null)
   const [flashcards, setFlashcards] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const [deletingId, setDeletingId] = useState(null)
 
   useEffect(() => {
     if (!moduleId) return
@@ -93,6 +103,27 @@ export default function ModuleDetailScreen({ moduleId, onBack, onNavigate }) {
     ? Math.round(flashcards.reduce((sum, c) => sum + (c.knowledgeScore || 0), 0) / flashcards.length)
     : 0
   const scoreColor = aggregateScore >= 70 ? 'bg-success' : aggregateScore >= 40 ? 'bg-warning' : 'bg-error'
+
+  const handleDeleteFlashcard = async (flashcard) => {
+    if (!confirm(`Are you sure you want to delete this flashcard? This action cannot be undone.`)) {
+      return
+    }
+
+    setDeletingId(flashcard.id)
+    try {
+      await flashcardService.deleteFlashcard(flashcard.id)
+      // Refresh the flashcard list
+      const result = await moduleService.getModuleFlashcards(moduleId)
+      if (result.success) {
+        setFlashcards(result.flashcards || [])
+      }
+    } catch (err) {
+      console.error('Failed to delete flashcard:', err)
+      alert('Failed to delete flashcard. Please try again.')
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -153,6 +184,8 @@ export default function ModuleDetailScreen({ moduleId, onBack, onNavigate }) {
                 flashcard={card}
                 onVoiceQuiz={(card) => onNavigate?.('voice_quiz', moduleId, card, module?.name)}
                 onTextQuiz={(card) => onNavigate?.('text_quiz', moduleId, card, module?.name)}
+                onDelete={handleDeleteFlashcard}
+                isDeleting={deletingId === card.id}
               />
             ))
           )}
