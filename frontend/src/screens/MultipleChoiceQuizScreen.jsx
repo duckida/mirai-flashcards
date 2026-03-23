@@ -130,7 +130,7 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-bg gap-6 p-6">
         {flashcard?.sourceImageUrl && (
-          <div className="w-full max-w-sm rounded-xl overflow-hidden shadow-lg bg-bg">
+          <div className="w-full max-w-sm rounded-xl overflow-hidden shadow-lg bg-white">
             <img 
               src={flashcard.sourceImageUrl} 
               alt="Flashcard" 
@@ -175,7 +175,7 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
 
   return (
     <div className="min-h-screen bg-bg flex flex-col overflow-x-hidden">
-      <header className="sticky top-0 z-10 flex items-center justify-between p-4 border-b border-border bg-bg shadow-sm">
+      <header className="sticky top-0 z-10 flex items-center justify-between p-4 border-b border-border bg-white shadow-sm">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-bold text-text-primary">Text Quiz</h1>
           <Badge variant="secondary">{currentQuestionIndex + 1} / {questions.length}</Badge>
@@ -184,7 +184,7 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
       </header>
 
       <div className="flex-1 flex flex-col">
-        <div className="p-2 bg-bg border-b border-border">
+        <div className="p-2 bg-white border-b border-border">
           <Progress value={progress} indicatorClassName="bg-primary" className="h-2" />
         </div>
 

@@ -137,14 +137,14 @@ export default function ModuleDetailScreen({ moduleId, onBack, onNavigate }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-bg">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <Spinner size="lg" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-bg">
+    <div className="min-h-screen bg-white">
       <header className="flex items-center justify-between p-5 border-b border-border">
         <div className="flex items-center gap-3">
           {module?.color && (

@@ -126,7 +126,7 @@ export default function UploadImageScreen({ onBack, onSuccess }) {
   }, [previewUrl])
 
   return (
-    <div className="min-h-screen bg-bg">
+    <div className="min-h-screen bg-white">
       <header className="flex items-center justify-between p-5 border-b border-border">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-primary-lighter flex items-center justify-center text-xl">📷</div>

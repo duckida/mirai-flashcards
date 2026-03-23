@@ -7,7 +7,7 @@ export default function AuthScreen() {
   const { isLoading, error, login } = useAuth()
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-bg relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-white relative overflow-hidden">
       <div className="absolute top-10 right-10 w-32 h-32 rounded-full bg-primary-light opacity-30 -z-10" />
       <div className="absolute bottom-16 left-8 w-20 h-20 rounded-full bg-primary/20 opacity-20 -z-10" />
 
