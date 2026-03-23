@@ -2,31 +2,32 @@ import { useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import useAuth from '@/hooks/useAuth'
+import useTheme from '@/hooks/useTheme'
 
 export default function SettingsScreen({ onBack }) {
   const { user, logout, updatePreferences } = useAuth()
+  const { theme, setTheme } = useTheme()
   const [isSaving, setIsSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState(null)
   const [error, setError] = useState(null)
   const [quizType, setQuizType] = useState(user?.preferences?.quizType || 'voice')
-  const [theme, setTheme] = useState(user?.preferences?.theme || 'light')
 
   const handleSave = useCallback(async () => {
     setIsSaving(true)
     setError(null)
     setSaveMessage(null)
     try {
-      await updatePreferences({ quizType, theme })
+      await updatePreferences({ quizType })
       setSaveMessage('Preferences saved successfully!')
     } catch (err) {
       setError(err.message || 'Failed to save preferences')
     } finally {
       setIsSaving(false)
     }
-  }, [quizType, theme, updatePreferences])
+  }, [quizType, updatePreferences])
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-bg">
       <header className="flex items-center justify-between p-5 border-b border-border">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-primary-lighter flex items-center justify-center text-xl">⚙️</div>

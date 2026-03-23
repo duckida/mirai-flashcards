@@ -178,7 +178,7 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
   const isActive = status === STATUS.CONNECTED || status === STATUS.CONNECTING
 
   return (
-    <div className="min-h-screen bg-white overflow-x-hidden">
+    <div className="min-h-screen bg-bg overflow-x-hidden">
       <header className="flex items-center justify-between p-5 border-b border-border">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-primary-lighter flex items-center justify-center text-xl">

@@ -64,7 +64,7 @@ export default function ImageQuizScreen({ moduleId, flashcard, onBack }) {
 
   if (isLoading && !flashcard) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="min-h-screen flex items-center justify-center bg-bg">
         <Spinner size="lg" />
       </div>
     )
@@ -72,7 +72,7 @@ export default function ImageQuizScreen({ moduleId, flashcard, onBack }) {
 
   if (error && !isAnswered) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white p-4">
+      <div className="min-h-screen flex items-center justify-center bg-bg p-4">
         <Card className="max-w-md w-full">
           <CardContent className="pt-8 pb-8 text-center">
             <div className="w-16 h-16 rounded-full bg-error-light flex items-center justify-center mx-auto mb-4 text-3xl">⚠️</div>
@@ -86,7 +86,7 @@ export default function ImageQuizScreen({ moduleId, flashcard, onBack }) {
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col overflow-x-hidden">
+    <div className="min-h-screen bg-bg flex flex-col overflow-x-hidden">
       <header className="flex items-center justify-between p-5 border-b border-border">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-primary-lighter flex items-center justify-center text-xl">📝</div>
@@ -134,7 +134,7 @@ export default function ImageQuizScreen({ moduleId, flashcard, onBack }) {
                     </span>
                   </div>
                   {!feedback?.isCorrect && (
-                    <div className="p-2 bg-white rounded-lg">
+                    <div className="p-2 bg-bg rounded-lg">
                       <p className="text-sm text-text-muted">Correct answer:</p>
                       <p className="text-text-primary font-semibold break-words">{flashcard?.answer}</p>
                     </div>

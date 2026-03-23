@@ -23,7 +23,7 @@ function ModuleCard({ module, onPress }) {
 
   return (
     <div
-      className="p-5 rounded-2xl border border-border bg-white cursor-pointer transition-all hover:border-primary hover:bg-primary-lighter hover:shadow-md"
+      className="p-5 rounded-2xl border border-border bg-bg cursor-pointer transition-all hover:border-primary hover:bg-primary-lighter hover:shadow-md"
       onClick={() => onPress(module)}
     >
       <div className="flex items-center justify-between mb-3">
@@ -112,7 +112,7 @@ export default function DashboardScreen({ onNavigate }) {
   const scoreColor = overallAvg >= 70 ? 'bg-success' : overallAvg >= 40 ? 'bg-warning' : 'bg-error'
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-bg">
       <header className="flex items-center justify-between p-5 border-b border-border">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-primary-lighter flex items-center justify-center text-xl">
@@ -182,7 +182,7 @@ export default function DashboardScreen({ onNavigate }) {
                   {searchResults.map((card) => (
                     <div
                       key={card.id}
-                      className="p-4 rounded-2xl border border-border bg-white cursor-pointer transition-all hover:border-primary hover:bg-primary-lighter hover:shadow-md"
+                      className="p-4 rounded-2xl border border-border bg-bg cursor-pointer transition-all hover:border-primary hover:bg-primary-lighter hover:shadow-md"
                       onClick={() => onNavigate?.(SCREENS.MODULE_DETAIL, card.moduleId)}
                     >
                       <div className="flex items-center gap-2 mb-2">

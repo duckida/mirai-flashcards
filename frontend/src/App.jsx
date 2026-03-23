@@ -9,6 +9,7 @@ import MultipleChoiceQuizScreen from './screens/MultipleChoiceQuizScreen'
 import QuizResultsScreen from './screens/QuizResultsScreen'
 import SettingsScreen from './screens/SettingsScreen'
 import VoiceQuizScreen from './screens/VoiceQuizScreen'
+import useTheme from './hooks/useTheme'
 
 const SCREENS = {
   DASHBOARD: 'dashboard',
@@ -23,6 +24,7 @@ const SCREENS = {
 
 function AppContent() {
   const { user, isLoading } = useUser()
+  useTheme() // Apply theme on mount
   const [currentScreen, setCurrentScreen] = useState(SCREENS.DASHBOARD)
   const [selectedModuleId, setSelectedModuleId] = useState(null)
   const [selectedFlashcard, setSelectedFlashcard] = useState(null)
@@ -59,7 +61,7 @@ function AppContent() {
   // isLoading briefly flips true — don't unmount the active screen.
   if (isLoading && !user) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-white gap-4">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-bg gap-4">
         <div className="w-12 h-12 border-[3px] border-border border-t-primary rounded-full animate-spin" />
         <p className="text-text-secondary">Loading...</p>
       </div>
