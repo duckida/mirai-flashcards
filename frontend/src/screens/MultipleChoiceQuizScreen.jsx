@@ -129,6 +129,15 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-bg gap-6 p-6">
+        {flashcard?.sourceImageUrl && (
+          <div className="w-full max-w-sm rounded-xl overflow-hidden shadow-lg bg-white">
+            <img 
+              src={flashcard.sourceImageUrl} 
+              alt="Flashcard" 
+              className="w-full h-auto"
+            />
+          </div>
+        )}
         <Spinner size="lg" />
         <div className="w-full max-w-xs space-y-2 text-center">
           <p className="text-text-primary font-medium">Generating questions...</p>
