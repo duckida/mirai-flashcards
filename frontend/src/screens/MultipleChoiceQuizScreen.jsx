@@ -165,7 +165,7 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
   const isLastQuestion = currentQuestionIndex === questions.length - 1;
 
   return (
-    <div className="min-h-screen bg-bg flex flex-col">
+    <div className="min-h-screen bg-bg flex flex-col overflow-x-hidden">
       <header className="sticky top-0 z-10 flex items-center justify-between p-4 border-b border-border bg-white shadow-sm">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-bold text-text-primary">Text Quiz</h1>
@@ -186,15 +186,15 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
                 <span className="w-10 h-10 rounded-full bg-primary-lighter text-primary font-bold flex items-center justify-center text-lg shrink-0">
                   {currentQuestionIndex + 1}
                 </span>
-                <CardTitle className="text-xl leading-relaxed m-0">
+                <CardTitle className="text-xl leading-relaxed m-0 break-words">
                   {q.question}
                 </CardTitle>
               </div>
             </CardHeader>
-            <CardContent className="flex flex-col gap-3">
+            <CardContent className="flex flex-col gap-3 break-words">
               {q.options?.map((option, oIdx) => {
                 let btnVariant = "outline";
-                let btnClass = "justify-start h-auto py-4 px-4 text-left font-normal border-2 transition-all";
+                let btnClass = "justify-start h-auto py-4 px-4 text-left font-normal border-2 transition-all whitespace-normal break-words";
 
                 if (feedback) {
                   if (option === selectedOption) {
@@ -227,7 +227,7 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
               })}
 
               {feedback && (
-                <div className={`mt-4 p-4 rounded-xl text-sm border-l-4 ${feedback.isCorrect ? 'bg-success-light/30 border-l-success' : 'bg-error-light/30 border-l-error'}`}>
+                <div className={`mt-4 p-4 rounded-xl text-sm border-l-4 break-words ${feedback.isCorrect ? 'bg-success-light/30 border-l-success' : 'bg-error-light/30 border-l-error'}`}>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xl">{feedback.isCorrect ? '✅' : '❌'}</span>
                     <span className="font-bold text-base">
@@ -235,12 +235,12 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
                     </span>
                   </div>
                   {!feedback.isCorrect && (
-                    <p className="text-text-secondary mt-2">
+                    <p className="text-text-secondary mt-2 break-words">
                       The correct answer is: <strong>{feedback.correctAnswer || q.correctAnswer}</strong>
                     </p>
                   )}
                   {feedback.feedbackText && (
-                    <p className="text-text-secondary mt-1">{feedback.feedbackText}</p>
+                    <p className="text-text-secondary mt-1 break-words">{feedback.feedbackText}</p>
                   )}
                 </div>
               )}

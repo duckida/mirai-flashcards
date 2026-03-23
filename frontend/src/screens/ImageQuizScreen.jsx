@@ -77,7 +77,7 @@ export default function ImageQuizScreen({ moduleId, flashcard, onBack }) {
           <CardContent className="pt-8 pb-8 text-center">
             <div className="w-16 h-16 rounded-full bg-error-light flex items-center justify-center mx-auto mb-4 text-3xl">⚠️</div>
             <h3 className="text-xl font-bold text-error mb-2">Error</h3>
-            <p className="text-text-secondary mb-4">{error}</p>
+            <p className="text-text-secondary mb-4 break-words">{error}</p>
             <Button className="w-full" onClick={onBack}>Return</Button>
           </CardContent>
         </Card>
@@ -86,7 +86,7 @@ export default function ImageQuizScreen({ moduleId, flashcard, onBack }) {
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col overflow-x-hidden">
       <header className="flex items-center justify-between p-5 border-b border-border">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-primary-lighter flex items-center justify-center text-xl">📝</div>
@@ -112,7 +112,7 @@ export default function ImageQuizScreen({ moduleId, flashcard, onBack }) {
                 <div className="w-5 h-5 rounded-md bg-primary flex items-center justify-center text-white font-bold text-xs">Q</div>
                 <span className="text-xs text-primary font-semibold uppercase tracking-wide">Question</span>
               </div>
-              <p className="text-lg font-bold text-text-primary">{flashcard?.question || 'Loading...'}</p>
+              <p className="text-lg font-bold text-text-primary break-words">{flashcard?.question || 'Loading...'}</p>
             </div>
 
             {!isAnswered && (
@@ -136,7 +136,7 @@ export default function ImageQuizScreen({ moduleId, flashcard, onBack }) {
                   {!feedback?.isCorrect && (
                     <div className="p-2 bg-white rounded-lg">
                       <p className="text-sm text-text-muted">Correct answer:</p>
-                      <p className="text-text-primary font-semibold">{flashcard?.answer}</p>
+                      <p className="text-text-primary font-semibold break-words">{flashcard?.answer}</p>
                     </div>
                   )}
                   {feedback?.scoreChange !== undefined && (

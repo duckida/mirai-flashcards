@@ -26,7 +26,7 @@ function ScoreChangeItem({ flashcardId, result, flashcards }) {
         {!result.isCorrect && result.correctAnswer && (
           <div className="p-2 bg-success-light rounded-lg mt-2">
             <span className="text-xs text-text-muted">Answer: </span>
-            <span className="text-sm text-text-primary">{result.correctAnswer}</span>
+            <span className="text-sm text-text-primary break-words">{result.correctAnswer}</span>
           </div>
         )}
         <div className="flex justify-end mt-2">
@@ -60,7 +60,7 @@ export default function QuizResultsScreen({ summary, flashcards, moduleId, modul
   const seconds = duration % 60
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white overflow-x-hidden">
       <header className="flex items-center justify-between p-5 border-b border-border">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-success-light flex items-center justify-center text-xl">🏆</div>

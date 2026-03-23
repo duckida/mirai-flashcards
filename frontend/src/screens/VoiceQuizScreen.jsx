@@ -178,7 +178,7 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
   const isActive = status === STATUS.CONNECTED || status === STATUS.CONNECTING
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white overflow-x-hidden">
       <header className="flex items-center justify-between p-5 border-b border-border">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-primary-lighter flex items-center justify-center text-xl">
@@ -200,7 +200,7 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
                 <span>⚠️</span>
                 <div>
                   <p className="text-error font-semibold">Error</p>
-                  <p className="text-error text-sm mt-1">{error}</p>
+                  <p className="text-error text-sm mt-1 break-words">{error}</p>
                 </div>
               </div>
             </CardContent>
@@ -365,7 +365,7 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
 
             {status === STATUS.ERROR && (
               <div className="flex flex-col items-center gap-4 py-6">
-                <p className="text-error text-center">{error}</p>
+                <p className="text-error text-center break-words">{error}</p>
                 <Button onClick={() => setStatus(STATUS.IDLE)}>Try Again</Button>
               </div>
             )}
