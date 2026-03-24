@@ -31,7 +31,8 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
   const [summary, setSummary] = useState(null)
   const [canSendFeedback, setCanSendFeedback] = useState(false)
   const [feedbackGiven, setFeedbackGiven] = useState(false)
-  const conversationRef = useRef(null)
+  const [fallbackNotice, setFallbackNotice] = useState(null)
+  const sessionRef = useRef(null)
   const lastAgentMessageRef = useRef(null)
 
   const addTranscript = useCallback((role, text) => {
@@ -40,9 +41,9 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
 
   useEffect(() => {
     return () => {
-      if (conversationRef.current) {
-        conversationRef.current.endSession()
-        conversationRef.current = null
+      if (sessionRef.current) {
+        sessionRef.current.endSession()
+        sessionRef.current = null
       }
     }
   }, [])
@@ -87,6 +88,7 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
     setError(null)
     setTranscript([])
     setSummary(null)
+    setFallbackNotice(null)
 
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -98,14 +100,19 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
     }
 
     try {
-      const { Conversation } = await import('@elevenlabs/client')
       setStatus(STATUS.CONNECTING)
 
-      const signedUrl = await voiceService.getSignedUrl()
+      const providerConfig = await voiceService.getProviderConfig()
 
-      const conversation = await Conversation.startSession({
-        signedUrl,
-        connectionType: 'websocket',
+      if (providerConfig.fallbackOccurred) {
+        setFallbackNotice(
+          providerConfig.fallbackReason
+            ? `Switched to ${providerConfig.provider} (fallback): ${providerConfig.fallbackReason}`
+            : `Switched to ${providerConfig.provider} (fallback)`
+        )
+      }
+
+      const session = await voiceService.startSession(providerConfig, {
         onConnect: () => {
           setStatus(STATUS.CONNECTED)
         },
@@ -127,15 +134,17 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
         onCanSendFeedbackChange: handleOnCanSendFeedbackChange,
       })
 
-      conversationRef.current = conversation
+      sessionRef.current = session
 
-      const id = conversation.getId()
+      const id = session.getId()
       setSessionId(id)
 
-      conversation.sendContextualUpdate(buildAgentContext())
-      
+      if (session.sendContextualUpdate) {
+        session.sendContextualUpdate(buildAgentContext())
+      }
+
       // Trigger agent to start the conversation
-      conversation.sendUserMessage('Hello, please start the quiz.')
+      session.sendMessage('Hello, please start the quiz.')
     } catch (err) {
       console.error('Failed to start voice conversation:', err)
       setError(`Failed to start voice quiz: ${err.message}`)
@@ -144,9 +153,9 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
   }, [handleOnMessage, handleOnModeChange, handleOnCanSendFeedbackChange])
 
   const endSession = useCallback(async () => {
-    if (conversationRef.current) {
-      conversationRef.current.endSession()
-      conversationRef.current = null
+    if (sessionRef.current) {
+      sessionRef.current.endSession()
+      sessionRef.current = null
     }
     setStatus(STATUS.ENDED)
 
@@ -161,16 +170,16 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
   }, [sessionId])
 
   const handleSendFeedback = useCallback(async (isPositive) => {
-    if (conversationRef.current && !feedbackGiven) {
-      conversationRef.current.sendFeedback(isPositive)
+    if (sessionRef.current && !feedbackGiven) {
+      sessionRef.current.sendFeedback(isPositive)
       setFeedbackGiven(true)
     }
   }, [feedbackGiven])
 
   const handleToggleMute = useCallback(() => {
-    if (conversationRef.current) {
+    if (sessionRef.current) {
       const newMuted = !isMuted
-      conversationRef.current.setMicMuted(newMuted)
+      sessionRef.current.setMicMuted(newMuted)
       setIsMuted(newMuted)
     }
   }, [isMuted])
@@ -193,6 +202,20 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
       </header>
 
       <main className="p-4 max-w-2xl mx-auto">
+        {fallbackNotice && (
+          <Card className="mb-4 bg-warning-light border-warning">
+            <CardContent className="pt-4">
+              <div className="flex items-start gap-2">
+                <span>ℹ️</span>
+                <div>
+                  <p className="text-warning font-semibold">Provider Switched</p>
+                  <p className="text-warning text-sm mt-1">{fallbackNotice}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {error && (
           <Card className="mb-4 bg-error-light border-error">
             <CardContent className="pt-4">
