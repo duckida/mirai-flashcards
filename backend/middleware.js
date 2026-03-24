@@ -8,7 +8,7 @@ export const config = {
   matcher: ['/api/:path*'],
 };
 
-export function proxy(request) {
+export function middleware(request) {
   // Add CORS headers for API routes
   const response = NextResponse.next();
   
