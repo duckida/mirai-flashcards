@@ -317,7 +317,11 @@ export const voiceService = {
     }
 
     // Create Gemini SDK client with ephemeral token and connect
-    const ai = new GoogleGenAI({ apiKey: ephemeralToken })
+    // Ephemeral tokens require v1alpha API version
+    const ai = new GoogleGenAI({
+      apiKey: ephemeralToken,
+      httpOptions: { apiVersion: 'v1alpha' },
+    })
 
     try {
       session = await ai.live.connect({
