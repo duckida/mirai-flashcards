@@ -1,7 +1,8 @@
+import { GoogleGenAI, Modality } from '@google/genai'
 import { apiClient } from './apiClient'
 
 /**
- * Audio utility: Convert Float32Array to PCM16 Int16Array.
+ * Convert Float32Array to Int16 PCM.
  */
 function floatTo16BitPCM(float32Array) {
   const buffer = new ArrayBuffer(float32Array.length * 2)
@@ -11,6 +12,31 @@ function floatTo16BitPCM(float32Array) {
     view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true)
   }
   return new Int16Array(buffer)
+}
+
+/**
+ * Downsample Float32 audio from one rate to another.
+ */
+function downsampleBuffer(buffer, inputRate, outputRate) {
+  if (outputRate >= inputRate) return buffer
+  const ratio = inputRate / outputRate
+  const newLength = Math.round(buffer.length / ratio)
+  const result = new Float32Array(newLength)
+  let offsetResult = 0
+  let offsetBuffer = 0
+  while (offsetResult < result.length) {
+    const nextOffset = Math.round((offsetResult + 1) * ratio)
+    let accum = 0
+    let count = 0
+    for (let i = offsetBuffer; i < nextOffset && i < buffer.length; i++) {
+      accum += buffer[i]
+      count++
+    }
+    result[offsetResult] = count > 0 ? accum / count : 0
+    offsetResult++
+    offsetBuffer = nextOffset
+  }
+  return result
 }
 
 /**
@@ -97,24 +123,28 @@ export const voiceService = {
   },
 
   /**
-   * Start Gemini Live session using @google/genai with ephemeral token.
-   * Streams PCM audio directly to Gemini and plays back native audio.
+   * Start Gemini Live session using @google/genai SDK.
+   * Captures raw PCM from mic via ScriptProcessorNode and plays back 24kHz PCM output.
    */
   async startGeminiSession(config, callbacks) {
+    const INPUT_SAMPLE_RATE = 16000
     const OUTPUT_SAMPLE_RATE = 24000
+    const CHUNK_DURATION_MS = 100
 
-    // Fetch Gemini connection info from backend
+    // Fetch Gemini API key from backend
     const geminiResp = await apiClient.get('/api/quiz/gemini-live')
     const geminiApiKey = geminiResp.apiKey
     const model = geminiResp.model
 
-    let ws = null
-    let stream = null
+    let session = null
+    let micStream = null
     let isMuted = false
     let sessionId = `gemini-${Date.now()}`
     let outputAudioContext = null
+    let inputAudioContext = null
+    let processorNode = null
 
-    // Audio playback with precise scheduling for seamless output
+    // Audio playback state
     let nextPlayTime = 0
     let audioAccumulator = []
     let modeChangeTimer = null
@@ -142,7 +172,6 @@ export const voiceService = {
         })
       }
 
-      // Concatenate all accumulated samples
       const totalLength = audioAccumulator.reduce((sum, arr) => sum + arr.length, 0)
       const combined = new Int16Array(totalLength)
       let offset = 0
@@ -152,7 +181,6 @@ export const voiceService = {
       }
       audioAccumulator = []
 
-      // Convert to AudioBuffer
       const audioBuffer = outputAudioContext.createBuffer(1, combined.length, OUTPUT_SAMPLE_RATE)
       const channelData = audioBuffer.getChannelData(0)
       for (let i = 0; i < combined.length; i++) {
@@ -163,7 +191,6 @@ export const voiceService = {
       source.buffer = audioBuffer
       source.connect(outputAudioContext.destination)
 
-      // Schedule seamlessly — no gaps between chunks
       const now = outputAudioContext.currentTime
       if (nextPlayTime < now) {
         nextPlayTime = now
@@ -180,231 +207,192 @@ export const voiceService = {
 
     const queueAudioChunk = (pcm16) => {
       audioAccumulator.push(pcm16)
-      // Flush when we've accumulated ~200ms of audio (4800 samples at 24kHz)
       const totalSamples = audioAccumulator.reduce((sum, arr) => sum + arr.length, 0)
       if (totalSamples >= OUTPUT_SAMPLE_RATE * 0.2) {
         flushAudioBuffer()
       }
     }
 
-    // Start microphone capture using MediaRecorder (reliable in all browsers)
-    const startAudioCapture = () => {
-      navigator.mediaDevices.getUserMedia({
+    // Start mic capture using ScriptProcessorNode for raw PCM at 16kHz
+    const startAudioCapture = async () => {
+      micStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           channelCount: 1,
-          sampleRate: 16000,
           echoCancellation: true,
           noiseSuppression: true,
         },
-      }).then((mediaStream) => {
-        stream = mediaStream
-
-        // Use MediaRecorder to capture audio chunks
-        const recorder = new MediaRecorder(mediaStream, {
-          mimeType: 'audio/webm;codecs=opus',
-        })
-
-        recorder.ondataavailable = async (e) => {
-          if (e.data.size === 0 || isMuted || !ws || ws.readyState !== WebSocket.OPEN) return
-
-          // Decode WebM/Opus to PCM 16kHz using AudioContext
-          const arrayBuffer = await e.data.arrayBuffer()
-          const decodeCtx = new AudioContext({ sampleRate: 16000 })
-
-          try {
-            const audioBuffer = await decodeCtx.decodeAudioData(arrayBuffer)
-            const channelData = audioBuffer.getChannelData(0)
-            const pcm16 = floatTo16BitPCM(channelData)
-            const base64 = arrayBufferToBase64(pcm16.buffer)
-
-            ws.send(JSON.stringify({
-              realtimeInput: {
-                mediaChunks: [{
-                  mimeType: 'audio/pcm;rate=16000',
-                  data: base64,
-                }],
-              },
-            }))
-          } catch (err) {
-            // Decode error, skip this chunk
-          } finally {
-            decodeCtx.close()
-          }
-        }
-
-        // Collect audio every 500ms
-        recorder.start(500)
-        console.log('[Gemini] MediaRecorder started at 16kHz')
-      }).catch((err) => {
-        console.error('[Gemini] Mic access error:', err)
       })
+
+      inputAudioContext = new AudioContext()
+      const source = inputAudioContext.createMediaStreamSource(micStream)
+      const bufferSize = Math.round(inputAudioContext.sampleRate * CHUNK_DURATION_MS / 1000)
+      processorNode = inputAudioContext.createScriptProcessor(bufferSize, 1, 1)
+
+      processorNode.onaudioprocess = (e) => {
+        if (isMuted || !session) return
+
+        const inputData = e.inputBuffer.getChannelData(0)
+        const downsampled = downsampleBuffer(inputData, inputAudioContext.sampleRate, INPUT_SAMPLE_RATE)
+        const pcm16 = floatTo16BitPCM(downsampled)
+        const base64 = arrayBufferToBase64(pcm16.buffer)
+
+        session.sendRealtimeInput({
+          audio: {
+            data: base64,
+            mimeType: `audio/pcm;rate=${INPUT_SAMPLE_RATE}`,
+          },
+        })
+      }
+
+      source.connect(processorNode)
+      processorNode.connect(inputAudioContext.destination)
     }
 
-    // Connect to Gemini Live via raw WebSocket with API key
-    const wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${geminiApiKey}`
+    // Create Gemini SDK client and connect
+    const ai = new GoogleGenAI({ apiKey: geminiApiKey })
 
-    return new Promise((resolve, reject) => {
-      ws = new WebSocket(wsUrl)
-
-      ws.onopen = () => {
-        console.log('[Gemini] WebSocket open, sending setup...')
-
-        // Send setup message with model config
-        ws.send(JSON.stringify({
-          setup: {
-            model,
-            generation_config: {
-              response_modalities: ['AUDIO'],
-              speech_config: {
-                voice_config: {
-                  prebuilt_voice_config: { voice_name: 'Zephyr' },
-                },
-                language_code: 'en-US',
-              },
-            },
+    try {
+      session = await ai.live.connect({
+        model,
+        callbacks: {
+          onopen: () => {
+            console.log('[Gemini] Session open')
           },
-        }))
-      }
+          onmessage: (message) => {
+            const sc = message.serverContent
 
-      ws.onmessage = async (event) => {
-        // Handle binary/Blob messages - try parsing as JSON first, treat as audio if not
-        if (event.data instanceof Blob) {
-          const text = await event.data.text()
-          try {
-            const msg = JSON.parse(text)
-            handleJsonMessage(msg)
-            return
-          } catch (e) {
-            // Not JSON - treat as raw audio bytes
-            const arrayBuffer = await event.data.arrayBuffer()
-            const int16 = new Int16Array(arrayBuffer)
-            queueAudioChunk(int16)
-            return
-          }
-        }
-
-        // Handle text (JSON) messages
-        try {
-          const msg = JSON.parse(event.data)
-          handleJsonMessage(msg)
-        } catch (err) {
-          console.error('[Gemini] Parse error:', err)
-        }
-      }
-
-      const handleJsonMessage = (msg) => {
-        // Session ready
-        if (msg.setupComplete) {
-          console.log('[Gemini] Session ready')
-          callbacks.onConnect?.()
-          callbacks.onModeChange?.('listening')
-          startAudioCapture()
-          resolve(sessionObj)
-          return
-        }
-
-        // Server content
-        if (msg.serverContent) {
-          const sc = msg.serverContent
-
-          // Model turn with audio parts
-          if (sc.modelTurn) {
-            for (const part of sc.modelTurn.parts || []) {
-              if (part.inlineData?.mimeType?.startsWith('audio/pcm')) {
-                const pcm16 = base64ToPCM16(part.inlineData.data)
-                queueAudioChunk(pcm16)
+            if (sc) {
+              // Model turn with audio parts
+              if (sc.modelTurn) {
+                for (const part of sc.modelTurn.parts || []) {
+                  if (part.inlineData?.mimeType?.startsWith('audio/pcm')) {
+                    const pcm16 = base64ToPCM16(part.inlineData.data)
+                    queueAudioChunk(pcm16)
+                  }
+                  if (part.text) {
+                    callbacks.onMessage?.({ type: 'agent-message', text: part.text })
+                  }
+                }
               }
-              if (part.text) {
-                callbacks.onMessage?.({ type: 'agent-message', text: part.text })
+
+              // Output transcription
+              if (sc.outputTranscription?.text) {
+                callbacks.onMessage?.({
+                  type: 'agent-message',
+                  text: sc.outputTranscription.text,
+                })
+              }
+
+              // Input transcription
+              if (sc.inputTranscription?.text) {
+                callbacks.onMessage?.({
+                  type: 'user-message',
+                  text: sc.inputTranscription.text,
+                })
+              }
+
+              // Interrupted
+              if (sc.interrupted) {
+                audioAccumulator = []
+                nextPlayTime = 0
+                callbacks.onModeChange?.('listening')
+              }
+
+              // Turn complete
+              if (sc.turnComplete) {
+                flushAudioBuffer()
               }
             }
-          }
 
-          // Input transcription
-          if (sc.inputTranscription?.text) {
-            callbacks.onMessage?.({
-              type: 'user-message',
-              text: sc.inputTranscription.text,
-            })
-          }
-
-          // Output transcription
-          if (sc.outputTranscription?.text) {
-            callbacks.onMessage?.({
-              type: 'agent-message',
-              text: sc.outputTranscription.text,
-            })
-          }
-
-          // Interrupted
-          if (sc.interrupted) {
-            audioAccumulator = []
-            nextPlayTime = 0
-            callbacks.onModeChange?.('listening')
-          }
-
-          // Turn complete
-          if (sc.turnComplete) {
-            // Ready for next turn
-          }
-        }
-
-        // Go away / error
-        if (msg.goAway) {
-          console.warn('[Gemini] Server go-away')
-        }
-      }
-
-      ws.onerror = (err) => {
-        console.error('[Gemini] WebSocket error:', err)
-        callbacks.onError?.(err)
-        reject(new Error('Gemini WebSocket connection failed'))
-      }
-
-      ws.onclose = (event) => {
-        console.log('[Gemini] WebSocket closed:', event.code, event.reason)
-        callbacks.onDisconnect?.()
-      }
-
-      // Session control object
-      var sessionObj = {
-        provider: 'gemini',
-        endSession: () => {
-          if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ clientContent: { turns: [], turnComplete: true } }))
-            ws.close()
-          }
-          if (stream) stream.getTracks().forEach((t) => t.stop())
-          if (outputAudioContext) outputAudioContext.close()
-          ws = null
+            // Go away
+            if (message.goAway) {
+              console.warn('[Gemini] Server go-away:', message.goAway.timeLeft)
+            }
+          },
+          onerror: (e) => {
+            console.error('[Gemini] Error:', e.message)
+            callbacks.onError?.(e)
+          },
+          onclose: (e) => {
+            console.log('[Gemini] Closed:', e.reason)
+            callbacks.onDisconnect?.()
+          },
         },
-        sendMessage: (msg) => {
-          if (!ws || ws.readyState !== WebSocket.OPEN) return
-          ws.send(JSON.stringify({
-            clientContent: {
-              turns: [{ role: 'user', parts: [{ text: msg }] }],
-              turnComplete: true,
+        config: {
+          responseModalities: [Modality.AUDIO],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: 'Zephyr' },
             },
-          }))
-          callbacks.onMessage?.({ type: 'user-message', text: msg })
+          },
         },
-        sendContextualUpdate: (ctx) => {
-          if (!ws || ws.readyState !== WebSocket.OPEN || !ctx) return
-          ws.send(JSON.stringify({
-            clientContent: {
-              turns: [{ role: 'user', parts: [{ text: `[Context: ${ctx}]` }] }],
-              turnComplete: true,
-            },
-          }))
-        },
-        setMicMuted: (muted) => {
-          isMuted = muted
-        },
-        sendFeedback: () => {
-          console.warn('Feedback not supported by Gemini provider')
-        },
-        getId: () => sessionId,
-      }
-    })
+      })
+    } catch (err) {
+      console.error('[Gemini] Failed to connect:', err)
+      throw err
+    }
+
+    // Connection established
+    callbacks.onConnect?.()
+    callbacks.onModeChange?.('listening')
+
+    // Start mic capture
+    try {
+      await startAudioCapture()
+    } catch (err) {
+      console.error('[Gemini] Mic capture error:', err)
+      throw err
+    }
+
+    // Session control object
+    return {
+      provider: 'gemini',
+      endSession: () => {
+        try {
+          session?.close()
+        } catch (e) {
+          // ignore
+        }
+        if (processorNode) {
+          processorNode.disconnect()
+          processorNode = null
+        }
+        if (inputAudioContext) {
+          inputAudioContext.close()
+          inputAudioContext = null
+        }
+        if (micStream) {
+          micStream.getTracks().forEach((t) => t.stop())
+          micStream = null
+        }
+        if (outputAudioContext) {
+          outputAudioContext.close()
+          outputAudioContext = null
+        }
+        session = null
+      },
+      sendMessage: (msg) => {
+        if (!session) return
+        session.sendClientContent({
+          turns: [{ role: 'user', parts: [{ text: msg }] }],
+          turnComplete: true,
+        })
+        callbacks.onMessage?.({ type: 'user-message', text: msg })
+      },
+      sendContextualUpdate: (ctx) => {
+        if (!session || !ctx) return
+        session.sendClientContent({
+          turns: [{ role: 'user', parts: [{ text: `[Context: ${ctx}]` }] }],
+          turnComplete: true,
+        })
+      },
+      setMicMuted: (muted) => {
+        isMuted = muted
+      },
+      sendFeedback: () => {
+        console.warn('Feedback not supported by Gemini provider')
+      },
+      getId: () => sessionId,
+    }
   },
 }

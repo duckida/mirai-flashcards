@@ -224,6 +224,14 @@ This implementation adds Gemini 2.5 Flash Native Audio as an alternative voice p
   - Added `input_audio_transcription: {}` then removed — not supported in Gemini Developer API v1beta proto
   - Removed unused `downsampleBuffer` function and constants
 
+- [x] 16. Rewrite Gemini Live session from scratch using @google/genai SDK
+  - Replaced raw WebSocket with official @google/genai SDK (handles protocol, setup, message framing)
+  - Replaced MediaRecorder with ScriptProcessorNode for real-time PCM 16kHz capture
+  - Re-added downsampleBuffer for native sample rate → 16kHz conversion
+  - Proper interruption handling (clear audio queue on `serverContent.interrupted`)
+  - Proper cleanup of AudioContext, mic tracks, processor node on session end
+  - Audio round-trip now works end-to-end
+
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for faster MVP
