@@ -1,21 +1,7 @@
 import { initializeAdmin } from './admin.js';
 
-let remoteConfigClient;
-
-/**
- * Get Firebase Remote Config client instance.
- * Lazily initializes on first access.
- * @returns {import('firebase-admin').remoteConfig.RemoteConfig}
- */
-export function getRemoteConfig() {
-  if (remoteConfigClient) {
-    return remoteConfigClient;
-  }
-
-  const app = initializeAdmin();
-  remoteConfigClient = app.remoteConfig();
-  return remoteConfigClient;
-}
+let remoteConfigClient = null;
+let initError = null;
 
 /**
  * Check if Firebase Remote Config is enabled via environment variable.
@@ -26,23 +12,51 @@ export function isRemoteConfigEnabled() {
 }
 
 /**
+ * Try to get Firebase Remote Config client instance.
+ * Returns null if initialization fails (graceful degradation).
+ * @returns {import('firebase-admin').remoteConfig.RemoteConfig|null}
+ */
+export function getRemoteConfig() {
+  if (initError) return null;
+  if (remoteConfigClient) return remoteConfigClient;
+
+  try {
+    const app = initializeAdmin();
+    remoteConfigClient = app.remoteConfig();
+    return remoteConfigClient;
+  } catch (error) {
+    initError = error.message;
+    console.warn('[RemoteConfig] Init failed:', error.message, '— falling back to defaults');
+    return null;
+  }
+}
+
+/**
  * Fetch provider configuration from Remote Config.
- * @returns {Promise<Object>} Parsed configuration object
+ * Returns null if Remote Config is unavailable.
+ * @returns {Promise<{provider: string, fallback: string, cacheTTL: number}|null>}
  */
 export async function fetchProviderConfig() {
   const rc = getRemoteConfig();
-  const template = await rc.getTemplate();
+  if (!rc) return null;
 
-  const providerSelection =
-    template.parameters?.voice_provider_selection?.defaultValue?.value || 'elevenlabs';
-  const fallbackProvider =
-    template.parameters?.voice_provider_fallback?.defaultValue?.value || 'elevenlabs';
-  const cacheTTL =
-    parseInt(template.parameters?.voice_config_cache_ttl_seconds?.defaultValue?.value || '3600', 10);
+  try {
+    const template = await rc.getTemplate();
 
-  return {
-    provider: providerSelection,
-    fallback: fallbackProvider,
-    cacheTTL: cacheTTL * 1000,
-  };
+    const providerSelection =
+      template.parameters?.voice_provider_selection?.defaultValue?.value || 'gemini';
+    const fallbackProvider =
+      template.parameters?.voice_provider_fallback?.defaultValue?.value || 'elevenlabs';
+    const cacheTTL =
+      parseInt(template.parameters?.voice_config_cache_ttl_seconds?.defaultValue?.value || '3600', 10);
+
+    return {
+      provider: providerSelection,
+      fallback: fallbackProvider,
+      cacheTTL: cacheTTL * 1000,
+    };
+  } catch (error) {
+    console.warn('[RemoteConfig] Fetch failed:', error.message, '— falling back to defaults');
+    return null;
+  }
 }
