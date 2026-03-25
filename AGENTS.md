@@ -37,7 +37,7 @@ mirai-hackathon/
 ├── backend/          # Next.js 15 (App Router) - API routes, services, Firebase
 │   ├── app/api/      # REST API endpoints
 │   ├── lib/          # Firebase admin, services, voice providers
-│   │   ├── firebase/       # admin.js, remoteConfig.js
+│   │   ├── firebase/       # admin.js
 │   │   ├── services/       # voiceProviderService.js, etc.
 │   │   └── voiceProviders/ # VoiceProvider.js, ElevenLabsProvider.js, GeminiProvider.js
 │   ├── middleware.js # CORS handling (MUST be named middleware.js for Next.js)
@@ -81,13 +81,13 @@ Always use the Vercel CLI for Vercel operations.
 - **Backend**: Next.js 15, ES Modules, Firebase/Firestore, Vercel Blob, OpenAI via AI SDK, Google GenAI SDK
 - **Frontend**: ES Modules, React, Vite, Tailwind CSS, shadcn/ui components
 - **Auth**: Civic.ai OAuth (`/api/auth/[...civicauth]`)
-- **Voice Providers**: ElevenLabs (default) + Gemini 2.5 Flash Native Audio, selected via Firebase Remote Config
+- **Voice Providers**: ElevenLabs (fallback) + Gemini 2.5 Flash Native Audio (default), selected via `VOICE_PROVIDER_DEFAULT` env var
 - **API Routes**: `/api/flashcards`, `/api/modules`, `/api/quiz`, `/api/quiz/speech-token`, `/api/quiz/gemini-live`, `/api/canva`
 - **Collections**: `users`, `modules`, `flashcards` (single-sided: `content` field), `quiz_sessions`, `presentations`
 
 ### Voice Provider Architecture
 ```
-speech-token API → VoiceProviderService → Remote Config / env default
+speech-token API → VoiceProviderService → env var (VOICE_PROVIDER_DEFAULT)
                          ↓
               ElevenLabsProvider  or  GeminiProvider
                          ↓
@@ -95,7 +95,7 @@ speech-token API → VoiceProviderService → Remote Config / env default
 ```
 
 - **ElevenLabs**: Signed URL via API, `@elevenlabs/client` SDK in browser
-- **Gemini Live**: API key returned via `/api/quiz/gemini-live`, raw WebSocket to `wss://generativelanguage.googleapis.com/ws/...BidiGenerateContent?key=API_KEY`
+- **Gemini Live**: Ephemeral token via `/api/quiz/gemini-live`, `@google/genai` SDK connects with `ai.live.connect()`
 - **Gemini Audio Format**: PCM 16-bit, 16kHz input / 24kHz output, mono
 - **Fallback**: If primary provider fails, automatically falls back to `elevenlabs`
 
@@ -152,7 +152,7 @@ Backend `.env.local`:
 - ElevenLabs (`ELEVENLABS_API_KEY`, `ELEVENLABS_AGENT_ID`)
 - Gemini (`GEMINI_API_KEY`, `GEMINI_PROJECT_ID`)
 - OpenAI (`OPENAI_API_KEY`)
-- Voice config (`FIREBASE_REMOTE_CONFIG_ENABLED`, `VOICE_PROVIDER_DEFAULT`)
+- Voice config (`VOICE_PROVIDER_DEFAULT` — `gemini` or `elevenlabs`)
 
 Frontend `.env.local`: `VITE_API_URL` (empty for local proxy, or set to backend URL)
 Frontend `.env`: `VITE_API_URL` (production default), `VITE_CIVIC_CLIENT_ID`
@@ -164,7 +164,7 @@ Backend `FRONTEND_URL`: Comma-separated allowed CORS origins (e.g., `http://loca
 - **classifierService.js** - AI classification of flashcards into modules
 - **quizEngineService.js** - Quiz logic, question generation, scoring
 - **speechService.js** - ElevenLabs speech synthesis/recognition
-- **voiceProviderService.js** - Voice provider selection, caching, fallback (uses Firebase Remote Config)
+- **voiceProviderService.js** - Voice provider selection, fallback
 - **imageService.js** - AI image generation for quizzes
 
 ### API Endpoints

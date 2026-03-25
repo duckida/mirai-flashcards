@@ -1,65 +1,17 @@
 import { ElevenLabsProvider, GeminiProvider } from '@/lib/voiceProviders/index.js';
-import {
-  isRemoteConfigEnabled,
-  fetchProviderConfig,
-} from '@/lib/firebase/remoteConfig.js';
 
 /**
- * Service for managing voice provider selection, caching, and fallback.
+ * Service for managing voice provider selection and fallback.
  */
 class VoiceProviderService {
-  constructor() {
-    /** @type {Map<string, {config: Object, timestamp: number}>} */
-    this.cache = new Map();
-    this.cacheTTL = 3600000; // 1 hour default
-  }
-
   /**
-   * Get provider configuration — from Remote Config if enabled, otherwise from env/default.
-   * @param {string|null} userId
-   * @returns {Promise<{provider: string, fallback: string, cacheTTL: number}>}
+   * Get provider configuration from environment variables.
+   * @returns {{provider: string, fallback: string}}
    */
-  async getProviderConfig(userId = null) {
-    const cacheKey = `voice_provider_config_${userId || 'default'}`;
-    const cached = this.cache.get(cacheKey);
-
-    if (cached && Date.now() - cached.timestamp < this.cacheTTL) {
-      console.log('[VoiceProvider] Cache hit', { cacheKey });
-      return cached.config;
-    }
-
-    if (isRemoteConfigEnabled()) {
-      console.log('[VoiceProvider] Cache miss — fetching from Remote Config', { cacheKey });
-      const rcConfig = await fetchProviderConfig();
-
-      if (rcConfig) {
-        this.cacheTTL = rcConfig.cacheTTL;
-        this.cache.set(cacheKey, { config: rcConfig, timestamp: Date.now() });
-        console.log('[VoiceProvider] Remote Config fetch successful', {
-          provider: rcConfig.provider,
-          fallback: rcConfig.fallback,
-        });
-        return rcConfig;
-      }
-
-      // Remote Config failed but we have stale cache
-      if (cached) {
-        console.warn('[VoiceProvider] Remote Config failed, using stale cache');
-        return cached.config;
-      }
-    }
-
-    // Remote Config disabled or unavailable — use defaults
-    const config = this._getDefaultConfig();
-    this.cache.set(cacheKey, { config, timestamp: Date.now() });
-    return config;
-  }
-
-  _getDefaultConfig() {
+  getProviderConfig() {
     return {
       provider: process.env.VOICE_PROVIDER_DEFAULT || 'gemini',
       fallback: 'elevenlabs',
-      cacheTTL: this.cacheTTL,
     };
   }
 
@@ -84,34 +36,27 @@ class VoiceProviderService {
 
   /**
    * Get a working provider with automatic fallback.
-   * @param {string|null} userId
    * @returns {Promise<{provider: import('@/lib/voiceProviders/VoiceProvider.js').VoiceProvider, isPrimary: boolean, fallbackOccurred: boolean, fallbackReason?: string}>}
    */
-  async getProvider(userId = null) {
-    const config = await this.getProviderConfig(userId);
+  async getProvider() {
+    const config = this.getProviderConfig();
 
     try {
       const provider = this.createProvider(config.provider);
       const isValid = await provider.validateCredentials();
 
       if (isValid) {
-        console.log('[VoiceProvider] Using primary provider', {
-          provider: config.provider,
-          userId,
-        });
+        console.log('[VoiceProvider] Using primary provider', { provider: config.provider });
         return { provider, isPrimary: true, fallbackOccurred: false };
       }
 
       throw new Error(`Provider ${config.provider} credentials invalid`);
     } catch (error) {
-      console.error(`[VoiceProvider] Primary provider ${config.provider} failed:`, {
-        error: error.message,
-        userId,
-      });
+      console.error(`[VoiceProvider] Primary provider ${config.provider} failed:`, error.message);
 
       // Attempt fallback
       try {
-        const fallbackName = config.fallback || 'elevenlabs';
+        const fallbackName = config.fallback;
         if (fallbackName === config.provider) {
           throw error;
         }
@@ -123,7 +68,6 @@ class VoiceProviderService {
           console.warn('[VoiceProvider] Falling back to provider', {
             provider: fallbackName,
             reason: error.message,
-            userId,
           });
           return {
             provider: fallbackProvider,
@@ -140,7 +84,6 @@ class VoiceProviderService {
           fallback: config.fallback,
           primaryError: error.message,
           fallbackError: fallbackError.message,
-          userId,
         });
         throw new Error('All voice providers unavailable');
       }
