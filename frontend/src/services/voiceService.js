@@ -146,6 +146,21 @@ export const voiceService = {
     // Audio playback with precise scheduling for seamless output
     let nextPlayTime = 0
     let audioAccumulator = []
+    let modeChangeTimer = null
+
+    const setMode = (mode) => {
+      clearTimeout(modeChangeTimer)
+      callbacks.onModeChange?.(mode)
+    }
+
+    const scheduleListeningMode = () => {
+      clearTimeout(modeChangeTimer)
+      modeChangeTimer = setTimeout(() => {
+        if (audioAccumulator.length === 0) {
+          callbacks.onModeChange?.('listening')
+        }
+      }, 500)
+    }
 
     const flushAudioBuffer = () => {
       if (audioAccumulator.length === 0) return
@@ -185,18 +200,10 @@ export const voiceService = {
       source.start(nextPlayTime)
       nextPlayTime += audioBuffer.duration
 
-      callbacks.onModeChange?.('speaking')
+      setMode('speaking')
 
-      // Detect when all queued audio finishes
       source.onended = () => {
-        // Small delay to allow new chunks to arrive
-        setTimeout(() => {
-          if (audioAccumulator.length > 0) {
-            flushAudioBuffer()
-          } else {
-            callbacks.onModeChange?.('listening')
-          }
-        }, 50)
+        scheduleListeningMode()
       }
     }
 
@@ -209,31 +216,43 @@ export const voiceService = {
       }
     }
 
-    // Start microphone capture using MediaRecorder (more reliable than ScriptProcessorNode)
+    // Start microphone capture using AudioWorklet or ScriptProcessorNode
+    let audioSendInterval = null
+
     const startAudioCapture = () => {
       navigator.mediaDevices.getUserMedia({ audio: true }).then((mediaStream) => {
         stream = mediaStream
 
-        // Use AudioContext for PCM conversion
+        // Create AudioContext at 16kHz (Gemini's native input rate)
         audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 })
         const source = audioContext.createMediaStreamSource(mediaStream)
 
-        processor = audioContext.createScriptProcessor(4096, 1, 1)
+        // Use ScriptProcessorNode to capture PCM data
+        const BUFFER_SIZE = 4096
+        processor = audioContext.createScriptProcessor(BUFFER_SIZE, 1, 1)
+
         let accumulatedSamples = []
-        const samplesPerChunk = Math.floor(INPUT_SAMPLE_RATE * 0.1) // 100ms chunks
+        const samplesPerChunk = 1600 // 100ms at 16kHz
 
         processor.onaudioprocess = (e) => {
           if (isMuted || !ws || ws.readyState !== WebSocket.OPEN) return
 
           const inputData = e.inputBuffer.getChannelData(0)
 
+          // Copy samples to accumulator
           for (let i = 0; i < inputData.length; i++) {
-            accumulatedSamples.push(inputData[i])
+            accumulatedSamples[accumulatedSamples.length] = inputData[i]
           }
 
+          // Send chunks of 100ms
           while (accumulatedSamples.length >= samplesPerChunk) {
-            const chunk = accumulatedSamples.splice(0, samplesPerChunk)
-            const pcm16 = floatTo16BitPCM(new Float32Array(chunk))
+            const chunk = new Float32Array(samplesPerChunk)
+            for (let i = 0; i < samplesPerChunk; i++) {
+              chunk[i] = accumulatedSamples[i]
+            }
+            accumulatedSamples = accumulatedSamples.slice(samplesPerChunk)
+
+            const pcm16 = floatTo16BitPCM(chunk)
             const base64 = arrayBufferToBase64(pcm16.buffer)
 
             ws.send(JSON.stringify({
@@ -243,12 +262,16 @@ export const voiceService = {
           }
         }
 
-        // Connect to destination is required for ScriptProcessorNode to fire
-        const gainNode = audioContext.createGain()
-        gainNode.gain.value = 0 // Mute output to prevent feedback
+        // Must connect to destination for processor to fire (muted to prevent feedback)
+        const silentGain = audioContext.createGain()
+        silentGain.gain.value = 0
         source.connect(processor)
-        processor.connect(gainNode)
-        gainNode.connect(audioContext.destination)
+        processor.connect(silentGain)
+        silentGain.connect(audioContext.destination)
+
+        console.log('[Gemini] Mic capture started at 16kHz')
+      }).catch((err) => {
+        console.error('[Gemini] Mic access error:', err)
       })
     }
 
