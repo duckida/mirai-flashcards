@@ -135,10 +135,8 @@ export const voiceService = {
     const geminiApiKey = geminiResp.apiKey
     const model = geminiResp.model
 
-    let session = null
-    let audioContext = null
+    let ws = null
     let stream = null
-    let processor = null
     let isMuted = false
     let sessionId = `gemini-${Date.now()}`
     let outputAudioContext = null
@@ -216,60 +214,50 @@ export const voiceService = {
       }
     }
 
-    // Start microphone capture using AudioWorklet or ScriptProcessorNode
-    let audioSendInterval = null
-
+    // Start microphone capture using MediaRecorder (reliable in all browsers)
     const startAudioCapture = () => {
-      navigator.mediaDevices.getUserMedia({ audio: true }).then((mediaStream) => {
+      navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          sampleRate: 16000,
+          echoCancellation: true,
+          noiseSuppression: true,
+        },
+      }).then((mediaStream) => {
         stream = mediaStream
 
-        // Create AudioContext at 16kHz (Gemini's native input rate)
-        audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 })
-        const source = audioContext.createMediaStreamSource(mediaStream)
+        // Use MediaRecorder to capture audio chunks
+        const recorder = new MediaRecorder(mediaStream, {
+          mimeType: 'audio/webm;codecs=opus',
+        })
 
-        // Use ScriptProcessorNode to capture PCM data
-        const BUFFER_SIZE = 4096
-        processor = audioContext.createScriptProcessor(BUFFER_SIZE, 1, 1)
+        recorder.ondataavailable = async (e) => {
+          if (e.data.size === 0 || isMuted || !ws || ws.readyState !== WebSocket.OPEN) return
 
-        let accumulatedSamples = []
-        const samplesPerChunk = 1600 // 100ms at 16kHz
+          // Decode WebM/Opus to PCM 16kHz using AudioContext
+          const arrayBuffer = await e.data.arrayBuffer()
+          const decodeCtx = new AudioContext({ sampleRate: 16000 })
 
-        processor.onaudioprocess = (e) => {
-          if (isMuted || !ws || ws.readyState !== WebSocket.OPEN) return
-
-          const inputData = e.inputBuffer.getChannelData(0)
-
-          // Copy samples to accumulator
-          for (let i = 0; i < inputData.length; i++) {
-            accumulatedSamples[accumulatedSamples.length] = inputData[i]
-          }
-
-          // Send chunks of 100ms
-          while (accumulatedSamples.length >= samplesPerChunk) {
-            const chunk = new Float32Array(samplesPerChunk)
-            for (let i = 0; i < samplesPerChunk; i++) {
-              chunk[i] = accumulatedSamples[i]
-            }
-            accumulatedSamples = accumulatedSamples.slice(samplesPerChunk)
-
-            const pcm16 = floatTo16BitPCM(chunk)
+          try {
+            const audioBuffer = await decodeCtx.decodeAudioData(arrayBuffer)
+            const channelData = audioBuffer.getChannelData(0)
+            const pcm16 = floatTo16BitPCM(channelData)
             const base64 = arrayBufferToBase64(pcm16.buffer)
 
             ws.send(JSON.stringify({
               type: 'audio',
               data: base64,
             }))
+          } catch (err) {
+            // Decode error, skip this chunk
+          } finally {
+            decodeCtx.close()
           }
         }
 
-        // Must connect to destination for processor to fire (muted to prevent feedback)
-        const silentGain = audioContext.createGain()
-        silentGain.gain.value = 0
-        source.connect(processor)
-        processor.connect(silentGain)
-        silentGain.connect(audioContext.destination)
-
-        console.log('[Gemini] Mic capture started at 16kHz')
+        // Collect audio every 500ms
+        recorder.start(500)
+        console.log('[Gemini] MediaRecorder started at 16kHz')
       }).catch((err) => {
         console.error('[Gemini] Mic access error:', err)
       })
@@ -409,9 +397,7 @@ export const voiceService = {
             ws.send(JSON.stringify({ clientContent: { turns: [], turnComplete: true } }))
             ws.close()
           }
-          if (processor) processor.disconnect()
           if (stream) stream.getTracks().forEach((t) => t.stop())
-          if (audioContext) audioContext.close()
           if (outputAudioContext) outputAudioContext.close()
           ws = null
         },
