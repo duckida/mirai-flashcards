@@ -2,19 +2,6 @@ import { GoogleGenAI, Modality } from '@google/genai'
 import { apiClient } from './apiClient'
 
 /**
- * Convert Float32Array to Int16 PCM.
- */
-function floatTo16BitPCM(float32Array) {
-  const buffer = new ArrayBuffer(float32Array.length * 2)
-  const view = new DataView(buffer)
-  for (let i = 0; i < float32Array.length; i++) {
-    const s = Math.max(-1, Math.min(1, float32Array[i]))
-    view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true)
-  }
-  return new Int16Array(buffer)
-}
-
-/**
  * Downsample Float32 audio from one rate to another.
  */
 function downsampleBuffer(buffer, inputRate, outputRate) {
@@ -40,6 +27,19 @@ function downsampleBuffer(buffer, inputRate, outputRate) {
 }
 
 /**
+ * Convert Float32Array to Int16 PCM.
+ */
+function floatTo16BitPCM(float32Array) {
+  const buffer = new ArrayBuffer(float32Array.length * 2)
+  const view = new DataView(buffer)
+  for (let i = 0; i < float32Array.length; i++) {
+    const s = Math.max(-1, Math.min(1, float32Array[i]))
+    view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true)
+  }
+  return new Int16Array(buffer)
+}
+
+/**
  * Encode an ArrayBuffer to base64.
  */
 function arrayBufferToBase64(buffer) {
@@ -62,6 +62,62 @@ function base64ToPCM16(base64) {
   }
   return new Int16Array(bytes.buffer)
 }
+
+/**
+ * AudioWorklet processor code for PCM capture at 16kHz.
+ * Captures mic audio, downsamples to 16kHz, and posts PCM16 data back.
+ */
+const AUDIO_WORKLET_PROCESSOR_CODE = `
+class PCMCaptureProcessor extends AudioWorkletProcessor {
+  constructor() {
+    super()
+    this._inputSampleRate = sampleRate // global from AudioWorkletGlobalScope
+    this._outputSampleRate = 16000
+    this._ratio = this._inputSampleRate / this._outputSampleRate
+  }
+
+  process(inputs, outputs, parameters) {
+    const input = inputs[0]
+    if (!input || !input[0]) return true
+
+    const inputData = input[0]
+
+    // Downsample to 16kHz
+    let downsampled
+    if (this._ratio <= 1) {
+      downsampled = inputData
+    } else {
+      const newLength = Math.round(inputData.length / this._ratio)
+      downsampled = new Float32Array(newLength)
+      let offsetResult = 0
+      let offsetBuffer = 0
+      while (offsetResult < newLength) {
+        const nextOffset = Math.round((offsetResult + 1) * this._ratio)
+        let accum = 0
+        let count = 0
+        for (let i = offsetBuffer; i < nextOffset && i < inputData.length; i++) {
+          accum += inputData[i]
+          count++
+        }
+        downsampled[offsetResult] = count > 0 ? accum / count : 0
+        offsetResult++
+        offsetBuffer = nextOffset
+      }
+    }
+
+    // Convert to Int16 PCM
+    const pcm16 = new Int16Array(downsampled.length)
+    for (let i = 0; i < downsampled.length; i++) {
+      const s = Math.max(-1, Math.min(1, downsampled[i]))
+      pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7fff
+    }
+
+    this.port.postMessage({ type: 'audio', data: pcm16 }, [pcm16.buffer])
+    return true
+  }
+}
+registerProcessor('pcm-capture-processor', PCMCaptureProcessor)
+`
 
 export const voiceService = {
   /**
@@ -124,16 +180,16 @@ export const voiceService = {
 
   /**
    * Start Gemini Live session using @google/genai SDK.
-   * Captures raw PCM from mic via ScriptProcessorNode and plays back 24kHz PCM output.
+   * Uses ephemeral token, AudioWorklet for PCM capture, AudioContext for 24kHz playback.
    */
   async startGeminiSession(config, callbacks) {
     const INPUT_SAMPLE_RATE = 16000
     const OUTPUT_SAMPLE_RATE = 24000
-    const CHUNK_DURATION_MS = 100
+    const WORKLET_BUFFER_DURATION_MS = 100
 
-    // Fetch Gemini API key from backend
+    // Fetch ephemeral token from backend
     const geminiResp = await apiClient.get('/api/quiz/gemini-live')
-    const geminiApiKey = geminiResp.apiKey
+    const ephemeralToken = geminiResp.token
     const model = geminiResp.model
 
     let session = null
@@ -142,7 +198,8 @@ export const voiceService = {
     let sessionId = `gemini-${Date.now()}`
     let outputAudioContext = null
     let inputAudioContext = null
-    let processorNode = null
+    let workletNode = null
+    let workletUrl = null
 
     // Audio playback state
     let nextPlayTime = 0
@@ -213,27 +270,38 @@ export const voiceService = {
       }
     }
 
-    // Start mic capture using ScriptProcessorNode for raw PCM at 16kHz
+    // Start mic capture using AudioWorklet for raw PCM at 16kHz
     const startAudioCapture = async () => {
-      micStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-        },
-      })
+      // Request mic if not provided
+      if (!micStream) {
+        micStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true,
+          },
+        })
+      }
 
       inputAudioContext = new AudioContext()
+
+      // Must resume — Chrome suspends AudioContexts created outside user gestures
+      if (inputAudioContext.state === 'suspended') {
+        await inputAudioContext.resume()
+      }
+
+      // Create AudioWorklet from inline processor code
+      const blob = new Blob([AUDIO_WORKLET_PROCESSOR_CODE], { type: 'application/javascript' })
+      workletUrl = URL.createObjectURL(blob)
+      await inputAudioContext.audioWorklet.addModule(workletUrl)
+
       const source = inputAudioContext.createMediaStreamSource(micStream)
-      const bufferSize = Math.round(inputAudioContext.sampleRate * CHUNK_DURATION_MS / 1000)
-      processorNode = inputAudioContext.createScriptProcessor(bufferSize, 1, 1)
+      workletNode = new AudioWorkletNode(inputAudioContext, 'pcm-capture-processor')
 
-      processorNode.onaudioprocess = (e) => {
-        if (isMuted || !session) return
+      workletNode.port.onmessage = (e) => {
+        if (e.data.type !== 'audio' || isMuted || !session) return
 
-        const inputData = e.inputBuffer.getChannelData(0)
-        const downsampled = downsampleBuffer(inputData, inputAudioContext.sampleRate, INPUT_SAMPLE_RATE)
-        const pcm16 = floatTo16BitPCM(downsampled)
+        const pcm16 = new Int16Array(e.data.data)
         const base64 = arrayBufferToBase64(pcm16.buffer)
 
         session.sendRealtimeInput({
@@ -244,12 +312,12 @@ export const voiceService = {
         })
       }
 
-      source.connect(processorNode)
-      processorNode.connect(inputAudioContext.destination)
+      source.connect(workletNode)
+      workletNode.connect(inputAudioContext.destination)
     }
 
-    // Create Gemini SDK client and connect
-    const ai = new GoogleGenAI({ apiKey: geminiApiKey })
+    // Create Gemini SDK client with ephemeral token and connect
+    const ai = new GoogleGenAI({ apiKey: ephemeralToken })
 
     try {
       session = await ai.live.connect({
@@ -353,9 +421,14 @@ export const voiceService = {
         } catch (e) {
           // ignore
         }
-        if (processorNode) {
-          processorNode.disconnect()
-          processorNode = null
+        if (workletNode) {
+          workletNode.port.onmessage = null
+          workletNode.disconnect()
+          workletNode = null
+        }
+        if (workletUrl) {
+          URL.revokeObjectURL(workletUrl)
+          workletUrl = null
         }
         if (inputAudioContext) {
           inputAudioContext.close()

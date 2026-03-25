@@ -91,15 +91,6 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
     setFallbackNotice(null)
 
     try {
-      await navigator.mediaDevices.getUserMedia({ audio: true })
-      setStatus(STATUS.REQUESTING_MIC)
-    } catch (err) {
-      setError('Microphone access denied. Please allow microphone access and try again.')
-      setStatus(STATUS.ERROR)
-      return
-    }
-
-    try {
       setStatus(STATUS.CONNECTING)
 
       const providerConfig = await voiceService.getProviderConfig()

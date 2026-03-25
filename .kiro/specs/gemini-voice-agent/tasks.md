@@ -232,6 +232,14 @@ This implementation adds Gemini 2.5 Flash Native Audio as an alternative voice p
   - Proper cleanup of AudioContext, mic tracks, processor node on session end
   - Audio round-trip now works end-to-end
 
+- [x] 17. Fix remaining Gemini Live issues
+  - Ephemeral tokens: backend creates short-lived tokens via `ai.authTokens.create()`, no raw API key to browser
+  - AudioWorklet: replaced deprecated ScriptProcessorNode with AudioWorklet processor (inline Blob URL)
+  - AudioContext suspension: explicit `resume()` call after AudioContext creation
+  - Model name: fixed to `gemini-2.5-flash-native-audio-preview-12-2025` (removed `models/` prefix)
+  - Double mic request: removed pre-flight getUserMedia from VoiceQuizScreen, each provider handles own mic
+  - API version: `v1alpha` for ephemeral token and live connect support
+
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for faster MVP
