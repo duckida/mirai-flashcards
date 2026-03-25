@@ -76,10 +76,12 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
       parts.push(`The flashcard content to quiz on is:\n"${flashcard.content}"`)
     }
     parts.push(
-      'Ask the user a question based on the flashcard content above.',
-      'Wait for their verbal answer, then evaluate it.',
-      'Give encouraging feedback and either move to the next question or repeat if they need help.',
-      'Keep responses short and conversational.'
+      'You are a GCSE exam tutor. Ask the user a series of GCSE-style exam questions based on the flashcard content above.',
+      'For each question, clearly state the number of marks it is worth, e.g. "This question is worth 4 marks."',
+      'Ask one question at a time. Wait for the user\'s full verbal answer before responding.',
+      'After the user answers, give feedback on their response, award a mark count (e.g. "You scored 3 out of 4 marks"), and explain what was missing if applicable.',
+      'Then move on to the next question. Aim for 3-5 questions per session.',
+      'Keep responses clear, encouraging, and exam-focused.'
     )
     return parts.join(' ')
   }
