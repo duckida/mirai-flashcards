@@ -261,7 +261,6 @@ export const voiceService = {
                 },
                 language_code: 'en-US',
               },
-              input_audio_transcription: {},
             },
           },
         }))
