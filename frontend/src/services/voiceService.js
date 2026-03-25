@@ -209,26 +209,26 @@ export const voiceService = {
       }
     }
 
-    // Start microphone capture
+    // Start microphone capture using MediaRecorder (more reliable than ScriptProcessorNode)
     const startAudioCapture = () => {
-      audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 })
-
       navigator.mediaDevices.getUserMedia({ audio: true }).then((mediaStream) => {
         stream = mediaStream
-        const source = audioContext.createMediaStreamSource(mediaStream)
-        processor = audioContext.createScriptProcessor(4096, 1, 1)
 
+        // Use AudioContext for PCM conversion
+        audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 })
+        const source = audioContext.createMediaStreamSource(mediaStream)
+
+        processor = audioContext.createScriptProcessor(4096, 1, 1)
         let accumulatedSamples = []
-        const samplesPerChunk = Math.floor((INPUT_SAMPLE_RATE * CHUNK_DURATION_MS) / 1000)
+        const samplesPerChunk = Math.floor(INPUT_SAMPLE_RATE * 0.1) // 100ms chunks
 
         processor.onaudioprocess = (e) => {
-          if (isMuted || !session) return
+          if (isMuted || !ws || ws.readyState !== WebSocket.OPEN) return
 
           const inputData = e.inputBuffer.getChannelData(0)
-          const downsampled = downsampleBuffer(inputData, audioContext.sampleRate, INPUT_SAMPLE_RATE)
 
-          for (let i = 0; i < downsampled.length; i++) {
-            accumulatedSamples.push(downsampled[i])
+          for (let i = 0; i < inputData.length; i++) {
+            accumulatedSamples.push(inputData[i])
           }
 
           while (accumulatedSamples.length >= samplesPerChunk) {
@@ -236,14 +236,19 @@ export const voiceService = {
             const pcm16 = floatTo16BitPCM(new Float32Array(chunk))
             const base64 = arrayBufferToBase64(pcm16.buffer)
 
-            session.sendRealtimeInput({
-              mediaChunks: [{ mimeType: 'audio/pcm;rate=16000', data: base64 }],
-            })
+            ws.send(JSON.stringify({
+              type: 'audio',
+              data: base64,
+            }))
           }
         }
 
+        // Connect to destination is required for ScriptProcessorNode to fire
+        const gainNode = audioContext.createGain()
+        gainNode.gain.value = 0 // Mute output to prevent feedback
         source.connect(processor)
-        processor.connect(audioContext.destination)
+        processor.connect(gainNode)
+        gainNode.connect(audioContext.destination)
       })
     }
 
