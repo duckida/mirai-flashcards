@@ -218,6 +218,12 @@ This implementation adds Gemini 2.5 Flash Native Audio as an alternative voice p
     - Document Remote Config integration
     - _Requirements: 3.1, 5.1, 2.1_
 
+- [x] 15. Fix Gemini Live audio round-trip
+  - Fixed variable shadowing: outer `ws` was null when sending mic audio (line 270 `let ws` shadowed outer `ws`)
+  - Fixed audio message format: changed from custom `{ type: 'audio' }` to Gemini protocol `{ realtimeInput: { mediaChunks: [...] } }`
+  - Added `input_audio_transcription: {}` to setup message for user speech transcription
+  - Removed unused `downsampleBuffer` function and constants
+
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for faster MVP

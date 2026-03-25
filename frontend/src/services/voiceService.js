@@ -14,31 +14,6 @@ function floatTo16BitPCM(float32Array) {
 }
 
 /**
- * Downsample audio data from one sample rate to another.
- */
-function downsampleBuffer(buffer, inputSampleRate, outputSampleRate) {
-  if (outputSampleRate >= inputSampleRate) return buffer
-  const sampleRateRatio = inputSampleRate / outputSampleRate
-  const newLength = Math.round(buffer.length / sampleRateRatio)
-  const result = new Float32Array(newLength)
-  let offsetResult = 0
-  let offsetBuffer = 0
-  while (offsetResult < result.length) {
-    const nextOffsetBuffer = Math.round((offsetResult + 1) * sampleRateRatio)
-    let accum = 0
-    let count = 0
-    for (let i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i++) {
-      accum += buffer[i]
-      count++
-    }
-    result[offsetResult] = accum / count
-    offsetResult++
-    offsetBuffer = nextOffsetBuffer
-  }
-  return result
-}
-
-/**
  * Encode an ArrayBuffer to base64.
  */
 function arrayBufferToBase64(buffer) {
@@ -126,9 +101,7 @@ export const voiceService = {
    * Streams PCM audio directly to Gemini and plays back native audio.
    */
   async startGeminiSession(config, callbacks) {
-    const INPUT_SAMPLE_RATE = 16000
     const OUTPUT_SAMPLE_RATE = 24000
-    const CHUNK_DURATION_MS = 100
 
     // Fetch Gemini connection info from backend
     const geminiResp = await apiClient.get('/api/quiz/gemini-live')
@@ -245,8 +218,12 @@ export const voiceService = {
             const base64 = arrayBufferToBase64(pcm16.buffer)
 
             ws.send(JSON.stringify({
-              type: 'audio',
-              data: base64,
+              realtimeInput: {
+                mediaChunks: [{
+                  mimeType: 'audio/pcm;rate=16000',
+                  data: base64,
+                }],
+              },
             }))
           } catch (err) {
             // Decode error, skip this chunk
@@ -267,7 +244,7 @@ export const voiceService = {
     const wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${geminiApiKey}`
 
     return new Promise((resolve, reject) => {
-      let ws = new WebSocket(wsUrl)
+      ws = new WebSocket(wsUrl)
 
       ws.onopen = () => {
         console.log('[Gemini] WebSocket open, sending setup...')
@@ -284,6 +261,7 @@ export const voiceService = {
                 },
                 language_code: 'en-US',
               },
+              input_audio_transcription: {},
             },
           },
         }))
