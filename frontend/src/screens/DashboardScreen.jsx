@@ -88,22 +88,20 @@ export default function DashboardScreen({ onNavigate }) {
   }, [fetchModules])
 
   useEffect(() => {
-    if (!user?.id || modules.length === 0) return
-    let cancelled = false
-    const loadFlashcards = async () => {
+    if (!user?.id || modules.length === 0 || !searchQuery.trim()) return
+    const timer = setTimeout(async () => {
       setIsSearching(true)
       try {
         const cards = await flashcardService.getAllUserFlashcards(user.id)
-        if (!cancelled) setAllFlashcards(cards)
+        setAllFlashcards(cards)
       } catch {
         // search falls back silently
       } finally {
-        if (!cancelled) setIsSearching(false)
+        setIsSearching(false)
       }
-    }
-    loadFlashcards()
-    return () => { cancelled = true }
-  }, [user?.id, modules])
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [user?.id, modules, searchQuery])
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return []
@@ -213,6 +211,7 @@ export default function DashboardScreen({ onNavigate }) {
                           <img
                             src={card.sourceImageUrl}
                             alt="Flashcard"
+                            loading="lazy"
                             className="w-full max-h-48 object-cover"
                           />
                         </div>

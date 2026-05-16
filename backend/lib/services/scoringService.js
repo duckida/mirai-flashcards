@@ -6,6 +6,7 @@
  * module aggregate scoring, and score history tracking.
  */
 
+import admin from 'firebase-admin';
 import { getFirestore } from '../firebase/admin.js';
 
 const MIN_SCORE = 0;
@@ -120,9 +121,9 @@ export async function updateFlashcardScore(flashcardId, isCorrect, confidence = 
   );
   await batch.commit();
 
-  // Update module aggregate score
+  // Update module aggregate score incrementally (1 read instead of N)
   if (flashcard.moduleId) {
-    await recalculateModuleAggregate(flashcard.moduleId);
+    await incrementModuleAggregate(flashcard.moduleId, flashcard.knowledgeScore || 0, newScore);
   }
 
   return {
@@ -143,7 +144,7 @@ export async function updateFlashcardScore(flashcardId, isCorrect, confidence = 
 export async function batchUpdateScores(scoreUpdates) {
   const db = getFirestore();
   const results = [];
-  const affectedModules = new Set();
+  const moduleDeltas = {};
 
   for (const update of scoreUpdates) {
     const { flashcardId, isCorrect, confidence = 0.5 } = update;
@@ -189,15 +190,27 @@ export async function batchUpdateScores(scoreUpdates) {
     await batch.commit();
 
     if (flashcard.moduleId) {
-      affectedModules.add(flashcard.moduleId);
+      moduleDeltas[flashcard.moduleId] = (moduleDeltas[flashcard.moduleId] || 0) + (newScore - (flashcard.knowledgeScore || 0));
     }
 
     results.push({ flashcardId, newScore, scoreDelta: appliedDelta });
   }
 
-  // Recalculate aggregates for all affected modules
-  for (const moduleId of affectedModules) {
-    await recalculateModuleAggregate(moduleId);
+  // Incrementally update aggregates for all affected modules
+  for (const [moduleId, totalDelta] of Object.entries(moduleDeltas)) {
+    const moduleRef = db.collection('modules').doc(moduleId);
+    const moduleDoc = await moduleRef.get();
+    if (moduleDoc.exists) {
+      const data = moduleDoc.data();
+      if (data.totalKnowledgeScore !== undefined && data.flashcardCount > 0) {
+        const newTotal = data.totalKnowledgeScore + totalDelta;
+        const newAggregate = Math.round(newTotal / data.flashcardCount);
+        await moduleRef.update({
+          totalKnowledgeScore: newTotal,
+          aggregateKnowledgeScore: newAggregate,
+        });
+      }
+    }
   }
 
   return results;
@@ -215,18 +228,21 @@ export async function recalculateModuleAggregate(moduleId) {
   const flashcardsSnapshot = await db
     .collection('flashcards')
     .where('moduleId', '==', moduleId)
+    .select('knowledgeScore')
     .get();
 
-  const flashcards = flashcardsSnapshot.docs.map((doc) => doc.data());
-  const aggregateScore = calculateModuleAggregate(flashcards);
+  const scores = flashcardsSnapshot.docs.map((doc) => doc.data().knowledgeScore || 0);
+  const totalScore = scores.reduce((sum, s) => sum + s, 0);
+  const aggregateScore = scores.length > 0 ? Math.round(totalScore / scores.length) : 0;
 
   await db.collection('modules').doc(moduleId).update({
     aggregateKnowledgeScore: aggregateScore,
-    flashcardCount: flashcards.length,
+    flashcardCount: scores.length,
+    totalKnowledgeScore: totalScore,
     updatedAt: new Date(),
   });
 
-  return { aggregateScore, flashcardCount: flashcards.length };
+  return { aggregateScore, flashcardCount: scores.length };
 }
 
 /**
@@ -236,6 +252,29 @@ export async function recalculateModuleAggregate(moduleId) {
  * @param {number} limit - Max history entries to return
  * @returns {Promise<Array>} Score history entries
  */
+export async function incrementModuleAggregate(moduleId, oldScore, newScore) {
+  const db = getFirestore();
+  const moduleRef = db.collection('modules').doc(moduleId);
+  const moduleDoc = await moduleRef.get();
+
+  if (!moduleDoc.exists) return;
+
+  const data = moduleDoc.data();
+  const count = data.flashcardCount || 0;
+  if (count === 0) return;
+
+  if (data.totalKnowledgeScore !== undefined) {
+    const newTotal = data.totalKnowledgeScore - oldScore + newScore;
+    const newAggregate = Math.round(newTotal / count);
+    await moduleRef.update({
+      totalKnowledgeScore: newTotal,
+      aggregateKnowledgeScore: newAggregate,
+    });
+  } else {
+    await recalculateModuleAggregate(moduleId);
+  }
+}
+
 export async function getScoreHistory(flashcardId, limit = 50) {
   const db = getFirestore();
   const snapshot = await db

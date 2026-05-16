@@ -298,6 +298,7 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
                     <img 
                       src={flashcard.sourceImageUrl} 
                       alt="Flashcard" 
+                      loading="lazy"
                       className="w-full max-w-md mx-auto"
                     />
                   </div>

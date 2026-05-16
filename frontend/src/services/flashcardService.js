@@ -3,16 +3,12 @@ import { compressImage } from './imageCompression'
 
 export const flashcardService = {
   async uploadAndScan(file, userId, confidenceThreshold = 0.5, onProgress) {
-    // Compress image before upload
     let uploadFile = file
     try {
-      console.log('Compressing image before upload...')
       const result = await compressImage(file)
       uploadFile = result.file
-      console.log(`Compression complete: ${(result.compressionRatio * 100).toFixed(1)}% of original size`)
     } catch (error) {
       console.warn('Image compression failed, uploading original:', error.message)
-      // Continue with original file if compression fails
     }
     
     const formData = new FormData()
@@ -47,25 +43,7 @@ export const flashcardService = {
   },
 
   async getAllUserFlashcards(userId) {
-    const modulesData = await apiClient.get(`/api/modules?userId=${userId}`)
-    const modules = modulesData.modules || []
-    if (modules.length === 0) return []
-
-    const flashcardResults = await Promise.all(
-      modules.map(async (mod) => {
-        try {
-          const data = await apiClient.get(`/api/flashcards/${mod.id}`)
-          return (data.flashcards || []).map((card) => ({
-            ...card,
-            moduleName: mod.name,
-            moduleColor: mod.color || '#FEE500',
-            moduleIcon: mod.icon || null,
-          }))
-        } catch {
-          return []
-        }
-      })
-    )
-    return flashcardResults.flat()
+    const data = await apiClient.get(`/api/flashcards/all?userId=${userId}`)
+    return data.flashcards || []
   },
 }

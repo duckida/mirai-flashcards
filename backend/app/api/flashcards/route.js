@@ -75,15 +75,16 @@ export const POST = apiHandler(async (request) => {
       moduleAssignments[moduleId].flashcardIds.push(ref.id);
     }
 
-    // Update module flashcard count and aggregate score
+    // Update module flashcard count and aggregate score incrementally
     const existingCount = moduleDoc.data().flashcardCount || 0;
+    const existingTotal = moduleDoc.data().totalKnowledgeScore || 0;
     const newCount = existingCount + flashcards.length;
-    const allSnapshot = await db.collection('flashcards').where('moduleId', '==', moduleId).get();
-    const allCards = allSnapshot.docs.map((doc) => doc.data());
-    const totalScore = allCards.reduce((sum, card) => sum + (card.knowledgeScore || 0), 0);
-    const aggregateKnowledgeScore = newCount > 0 ? Math.round(totalScore / newCount) : 0;
+    const newCardsTotalScore = flashcards.reduce((sum, c) => sum + (c.knowledgeScore || 0), 0);
+    const newTotal = existingTotal + newCardsTotalScore;
+    const aggregateKnowledgeScore = newCount > 0 ? Math.round(newTotal / newCount) : 0;
     await db.collection('modules').doc(moduleId).update({
       flashcardCount: newCount,
+      totalKnowledgeScore: newTotal,
       aggregateKnowledgeScore,
       updatedAt: new Date(),
     });
@@ -147,18 +148,16 @@ export const POST = apiHandler(async (request) => {
       moduleAssignments[targetModuleId].flashcardIds.push(ref.id);
     }
 
-    // Update flashcard counts and aggregate scores for all affected modules
+    // Update flashcard counts and aggregate scores incrementally
     for (const [modId, assignment] of Object.entries(moduleAssignments)) {
       const moduleDoc = await db.collection('modules').doc(modId).get();
       const existingCount = moduleDoc.data().flashcardCount || 0;
+      const existingTotal = moduleDoc.data().totalKnowledgeScore || 0;
       const newCount = existingCount + assignment.flashcardIds.length;
-      const allSnapshot = await db.collection('flashcards').where('moduleId', '==', modId).get();
-      const allCards = allSnapshot.docs.map((doc) => doc.data());
-      const totalScore = allCards.reduce((sum, card) => sum + (card.knowledgeScore || 0), 0);
-      const aggregateKnowledgeScore = newCount > 0 ? Math.round(totalScore / newCount) : 0;
+      const newAggregate = newCount > 0 ? Math.round(existingTotal / newCount) : 0;
       await db.collection('modules').doc(modId).update({
         flashcardCount: newCount,
-        aggregateKnowledgeScore,
+        aggregateKnowledgeScore: newAggregate,
         updatedAt: new Date(),
       });
     }

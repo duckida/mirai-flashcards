@@ -1,9 +1,9 @@
 import { VoiceProvider } from './VoiceProvider.js';
 
-/**
- * Gemini 2.5 Flash Native Audio voice provider implementation.
- * Browser connects directly to Gemini Live API WebSocket.
- */
+let lastValidated = null;
+let isValidCache = null;
+const CACHE_TTL = 300000;
+
 export class GeminiProvider extends VoiceProvider {
   constructor(apiKey, projectId) {
     super();
@@ -31,13 +31,20 @@ export class GeminiProvider extends VoiceProvider {
     if (!this.apiKey) {
       return false;
     }
+    if (lastValidated && Date.now() - lastValidated < CACHE_TTL) {
+      return isValidCache;
+    }
     try {
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash?key=${this.apiKey}`,
         { method: 'GET' }
       );
-      return response.ok;
+      isValidCache = response.ok;
+      lastValidated = Date.now();
+      return isValidCache;
     } catch (error) {
+      isValidCache = false;
+      lastValidated = Date.now();
       return false;
     }
   }

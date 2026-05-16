@@ -57,6 +57,7 @@ function FlashcardCard({ flashcard, onVoiceQuiz, onTextQuiz, onDelete, isDeletin
               <img 
                 src={flashcard.sourceImageUrl} 
                 alt="Flashcard" 
+                loading="lazy"
                 className="w-full max-w-md mx-auto"
               />
               <button
@@ -86,8 +87,7 @@ function FlashcardCard({ flashcard, onVoiceQuiz, onTextQuiz, onDelete, isDeletin
               onClick={() => onVoiceQuiz?.(flashcard)}
             >
               <Mic className="w-4 h-4 shrink-0" />
-              <span className="hidden sm:inline">Voice</span>
-              <span className="sm:hidden">Quiz</span>
+              <span>Voice</span>
             </Button>
             <Button 
               variant="outline" 
@@ -96,8 +96,7 @@ function FlashcardCard({ flashcard, onVoiceQuiz, onTextQuiz, onDelete, isDeletin
               onClick={() => onTextQuiz?.(flashcard)}
             >
               <FileText className="w-4 h-4 shrink-0" />
-              <span className="hidden sm:inline">Text Quiz</span>
-              <span className="sm:hidden">Text Quiz</span>
+              <span>Text</span>
             </Button>
             <Button 
               variant="destructive" 

@@ -1,15 +1,16 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, Suspense, lazy } from 'react'
 import { Loader } from 'lucide-react'
 import { CivicAuthProvider, useUser } from '@civic/auth/react'
 import AuthScreen from './screens/AuthScreen'
-import DashboardScreen from './screens/DashboardScreen'
-import UploadImageScreen from './screens/UploadImageScreen'
-import ModuleDetailScreen from './screens/ModuleDetailScreen'
-import ImageQuizScreen from './screens/ImageQuizScreen'
-import MultipleChoiceQuizScreen from './screens/MultipleChoiceQuizScreen'
-import QuizResultsScreen from './screens/QuizResultsScreen'
-import SettingsScreen from './screens/SettingsScreen'
-import VoiceQuizScreen from './screens/VoiceQuizScreen'
+
+const DashboardScreen = lazy(() => import('./screens/DashboardScreen'))
+const UploadImageScreen = lazy(() => import('./screens/UploadImageScreen'))
+const ModuleDetailScreen = lazy(() => import('./screens/ModuleDetailScreen'))
+const ImageQuizScreen = lazy(() => import('./screens/ImageQuizScreen'))
+const MultipleChoiceQuizScreen = lazy(() => import('./screens/MultipleChoiceQuizScreen'))
+const QuizResultsScreen = lazy(() => import('./screens/QuizResultsScreen'))
+const SettingsScreen = lazy(() => import('./screens/SettingsScreen'))
+const VoiceQuizScreen = lazy(() => import('./screens/VoiceQuizScreen'))
 
 const SCREENS = {
   DASHBOARD: 'dashboard',
@@ -20,6 +21,14 @@ const SCREENS = {
   VOICE_QUIZ: 'voice_quiz',
   SETTINGS: 'settings',
   QUIZ_RESULTS: 'quiz_results',
+}
+
+function ScreenFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-white">
+      <Loader className="w-6 h-6 animate-spin text-text-muted" />
+    </div>
+  )
 }
 
 function AppContent() {
@@ -65,46 +74,52 @@ function AppContent() {
 
   switch (currentScreen) {
     case SCREENS.UPLOAD_IMAGE:
-      return <UploadImageScreen onBack={goBack} onSuccess={goBack} />
+      return <Suspense fallback={<ScreenFallback />}><UploadImageScreen onBack={goBack} onSuccess={goBack} /></Suspense>
     case SCREENS.SETTINGS:
-      return <SettingsScreen onBack={goBack} />
+      return <Suspense fallback={<ScreenFallback />}><SettingsScreen onBack={goBack} /></Suspense>
     case SCREENS.MODULE_DETAIL:
-      return <ModuleDetailScreen moduleId={selectedModuleId} onBack={goBack} onNavigate={navigateTo} />
+      return <Suspense fallback={<ScreenFallback />}><ModuleDetailScreen moduleId={selectedModuleId} onBack={goBack} onNavigate={navigateTo} /></Suspense>
     case SCREENS.IMAGE_QUIZ:
-      return <ImageQuizScreen moduleId={selectedModuleId} onBack={goBack} onNavigate={navigateTo} />
+      return <Suspense fallback={<ScreenFallback />}><ImageQuizScreen moduleId={selectedModuleId} onBack={goBack} onNavigate={navigateTo} /></Suspense>
     case SCREENS.TEXT_QUIZ:
       return (
-        <MultipleChoiceQuizScreen
-          moduleId={selectedModuleId}
-          moduleName={selectedModuleName}
-          flashcard={selectedFlashcard}
-          onBack={goToModule}
-          onComplete={(summary) => navigateTo(SCREENS.QUIZ_RESULTS, selectedModuleId, null, selectedModuleName, summary)}
-          onNavigate={navigateTo}
-        />
+        <Suspense fallback={<ScreenFallback />}>
+          <MultipleChoiceQuizScreen
+            moduleId={selectedModuleId}
+            moduleName={selectedModuleName}
+            flashcard={selectedFlashcard}
+            onBack={goToModule}
+            onComplete={(summary) => navigateTo(SCREENS.QUIZ_RESULTS, selectedModuleId, null, selectedModuleName, summary)}
+            onNavigate={navigateTo}
+          />
+        </Suspense>
       )
     case SCREENS.VOICE_QUIZ:
       return (
-        <VoiceQuizScreen
-          moduleId={selectedModuleId}
-          flashcard={selectedFlashcard}
-          moduleName={selectedModuleName}
-          onBack={goToModule}
-          onNavigate={navigateTo}
-        />
+        <Suspense fallback={<ScreenFallback />}>
+          <VoiceQuizScreen
+            moduleId={selectedModuleId}
+            flashcard={selectedFlashcard}
+            moduleName={selectedModuleName}
+            onBack={goToModule}
+            onNavigate={navigateTo}
+          />
+        </Suspense>
       )
     case SCREENS.QUIZ_RESULTS:
       return (
-        <QuizResultsScreen
-          summary={quizSummary}
-          moduleId={selectedModuleId}
-          moduleName={selectedModuleName}
-          onNavigate={navigateTo}
-          onReviewWeak={goToModule}
-        />
+        <Suspense fallback={<ScreenFallback />}>
+          <QuizResultsScreen
+            summary={quizSummary}
+            moduleId={selectedModuleId}
+            moduleName={selectedModuleName}
+            onNavigate={navigateTo}
+            onReviewWeak={goToModule}
+          />
+        </Suspense>
       )
     default:
-      return <DashboardScreen onNavigate={navigateTo} />
+      return <Suspense fallback={<ScreenFallback />}><DashboardScreen onNavigate={navigateTo} /></Suspense>
   }
 }
 

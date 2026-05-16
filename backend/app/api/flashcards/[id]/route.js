@@ -6,7 +6,7 @@
  */
 
 import { getFirestore } from '@/lib/firebase/admin.js';
-import { recalculateModuleAggregate } from '@/lib/services/scoringService.js';
+import { recalculateModuleAggregate, incrementModuleAggregate } from '@/lib/services/scoringService.js';
 import { apiHandler } from '@/lib/api/middleware.js';
 import { errorResponse, successResponse } from '@/lib/api/errorHandler.js';
 
@@ -32,6 +32,7 @@ export const GET = apiHandler(async (request, { params }) => {
     .collection('flashcards')
     .where('moduleId', '==', id)
     .orderBy('knowledgeScore', 'asc')
+    .limit(200)
     .get();
 
   const flashcards = snapshot.docs.map((doc) => ({
@@ -102,15 +103,32 @@ export const PATCH = apiHandler(async (request, { params }) => {
       updates.moduleId = body.moduleId;
 
       if (oldModuleId) {
-        await recalculateModuleAggregate(oldModuleId);
+        const oldScore = oldData.knowledgeScore || 0;
+        const db2 = getFirestore();
+        const oldModuleRef = db2.collection('modules').doc(oldModuleId);
+        const oldModuleData = (await oldModuleRef.get()).data();
+        if (oldModuleData?.totalKnowledgeScore !== undefined) {
+          const newOldTotal = oldModuleData.totalKnowledgeScore - oldScore;
+          const newOldCount = (oldModuleData.flashcardCount || 1) - 1;
+          await oldModuleRef.update({
+            flashcardCount: newOldCount,
+            totalKnowledgeScore: newOldTotal,
+            aggregateKnowledgeScore: newOldCount > 0 ? Math.round(newOldTotal / newOldCount) : 0,
+            updatedAt: new Date(),
+          });
+        } else {
+          await recalculateModuleAggregate(oldModuleId);
+        }
       }
 
       const newCount = newModuleDoc.data().flashcardCount || 0;
+      const newTotal = (newModuleDoc.data().totalKnowledgeScore || 0) + (oldData.knowledgeScore || 0);
       await db.collection('modules').doc(body.moduleId).update({
         flashcardCount: newCount + 1,
+        totalKnowledgeScore: newTotal,
+        aggregateKnowledgeScore: Math.round(newTotal / (newCount + 1)),
         updatedAt: new Date(),
       });
-      await recalculateModuleAggregate(body.moduleId);
     }
   }
 
@@ -148,11 +166,30 @@ export const DELETE = apiHandler(async (request, { params }) => {
 
   const flashcardData = flashcardDoc.data();
   const moduleId = flashcardData.moduleId;
+  const deletedScore = flashcardData.knowledgeScore || 0;
 
   await db.collection('flashcards').doc(id).delete();
 
   if (moduleId) {
-    await recalculateModuleAggregate(moduleId);
+    const db = getFirestore();
+    const moduleRef = db.collection('modules').doc(moduleId);
+    const moduleDoc = await moduleRef.get();
+    if (moduleDoc.exists) {
+      const data = moduleDoc.data();
+      const newCount = (data.flashcardCount || 1) - 1;
+      if (data.totalKnowledgeScore !== undefined) {
+        const newTotal = data.totalKnowledgeScore - deletedScore;
+        const newAggregate = newCount > 0 ? Math.round(newTotal / newCount) : 0;
+        await moduleRef.update({
+          flashcardCount: newCount,
+          totalKnowledgeScore: newTotal,
+          aggregateKnowledgeScore: newAggregate,
+          updatedAt: new Date(),
+        });
+      } else {
+        await recalculateModuleAggregate(moduleId);
+      }
+    }
   }
 
   return successResponse(null, 'Flashcard deleted successfully');

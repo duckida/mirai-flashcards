@@ -28,6 +28,7 @@ export const GET = apiHandler(async (request) => {
       .collection('modules')
       .where('userId', '==', userId)
       .orderBy('createdAt', 'desc')
+      .limit(100)
       .get();
 
     const modules = snapshot.docs.map((doc) => ({

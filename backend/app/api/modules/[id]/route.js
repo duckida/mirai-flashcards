@@ -30,38 +30,10 @@ export const GET = apiHandler(async (request, { params }) => {
 
   const moduleData = { id: moduleDoc.id, ...moduleDoc.data() };
 
-  // Get flashcards in this module for summary stats
-  const flashcardsSnapshot = await db
-    .collection('flashcards')
-    .where('moduleId', '==', id)
-    .get();
-
-  const flashcards = flashcardsSnapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  }));
-
-  // Calculate aggregate knowledge score
-  let aggregateScore = 0;
-  if (flashcards.length > 0) {
-    const totalScore = flashcards.reduce((sum, card) => sum + (card.knowledgeScore || 0), 0);
-    aggregateScore = Math.round(totalScore / flashcards.length);
-  }
-
-  // Update the module's aggregate score if it changed
-  if (moduleData.aggregateKnowledgeScore !== aggregateScore || moduleData.flashcardCount !== flashcards.length) {
-    await db.collection('modules').doc(id).update({
-      flashcardCount: flashcards.length,
-      aggregateKnowledgeScore: aggregateScore,
-      updatedAt: new Date(),
-    });
-  }
-
+  // Use denormalized values from module doc (no need to re-read all flashcards)
   return successResponse({
     module: {
       ...moduleData,
-      flashcardCount: flashcards.length,
-      aggregateKnowledgeScore: aggregateScore,
     },
   });
 });

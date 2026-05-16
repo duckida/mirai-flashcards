@@ -1,4 +1,3 @@
-import { GoogleGenAI, Modality } from '@google/genai'
 import { apiClient } from './apiClient'
 
 /**
@@ -318,6 +317,8 @@ export const voiceService = {
 
     // Create Gemini SDK client with ephemeral token and connect
     // Ephemeral tokens require v1alpha API version
+    const { GoogleGenAI, Modality } = await import('@google/genai')
+
     const ai = new GoogleGenAI({
       apiKey: ephemeralToken,
       httpOptions: { apiVersion: 'v1alpha' },

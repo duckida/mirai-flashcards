@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { quizService } from '../services/quizService'
 
 export default function useQuiz() {
@@ -33,17 +33,30 @@ export default function useQuiz() {
       const result = await quizService.startSession(userId, moduleId, type, cardCount)
       if (!result.success) throw new Error(result.error || 'Failed to start quiz')
       setSession(result.session)
-      const questionResult = await quizService.getNextQuestion(result.session.id)
-      if (!questionResult.success) throw new Error(questionResult.error || 'Failed to get first question')
-      setCurrentQuestion(questionResult.question || null)
     } catch (err) {
       setError(err.message)
       setSession(null)
       setCurrentQuestion(null)
-    } finally {
       setIsLoading(false)
     }
   }, [])
+
+  useEffect(() => {
+    if (!session?.id || currentQuestion !== null) return
+    const loadFirstQuestion = async () => {
+      setIsLoading(true)
+      try {
+        const questionResult = await quizService.getNextQuestion(session.id)
+        if (!questionResult.success) throw new Error(questionResult.error || 'Failed to get first question')
+        setCurrentQuestion(questionResult.question || null)
+      } catch (err) {
+        setError(err.message)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    loadFirstQuestion()
+  }, [session?.id])
 
   const loadQuestion = useCallback(async (sessionId) => {
     const sid = sessionId || session?.id
@@ -107,11 +120,9 @@ export default function useQuiz() {
     setIsLoading(true)
     setError(null)
     try {
-      const endResult = await quizService.endSession(session.id)
-      if (!endResult.success) throw new Error(endResult.error || 'Failed to end quiz')
-      const summaryData = await quizService.getSessionSummary(session.id)
-      if (!summaryData.success) throw new Error(summaryData.error || 'Failed to get summary')
-      setSummary(summaryData.summary)
+      const result = await quizService.endSession(session.id)
+      if (!result.success) throw new Error(result.error || 'Failed to end quiz')
+      setSummary(result.summary)
     } catch (err) {
       setError(err.message)
     } finally {

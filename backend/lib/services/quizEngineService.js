@@ -61,6 +61,12 @@ export async function startSession(userId, moduleId, type, cardCount = 10, speci
     preGeneratedQuestions = await generateMultipleChoiceQuestionsBatch(flashcards[0], 8);
   }
 
+  // Pre-generate image quiz questions at session start
+  if (type === 'image' && !specificFlashcardId) {
+    preGeneratedQuestions = await preGenerateImageQuestions(flashcards, moduleId);
+    flashcardIds = preGeneratedQuestions.map(q => q.flashcardId);
+  }
+
   const sessionRef = await db.collection('quiz_sessions').add({
     userId,
     moduleId,
@@ -245,6 +251,42 @@ async function generateImageForQuestion(questionText, flashcard, moduleName) {
   }
 }
 
+/**
+ * Pre-generate all questions for an image quiz session.
+ * Generates rephrased questions and images upfront to avoid
+ * sequential AI calls during the quiz.
+ */
+async function preGenerateImageQuestions(flashcards, moduleId) {
+  let moduleName = '';
+  try {
+    const moduleDoc = await db.collection('modules').doc(moduleId).get();
+    if (moduleDoc.exists) moduleName = moduleDoc.data().name || '';
+  } catch (e) {
+    // Module name is optional context
+  }
+
+  const results = await Promise.allSettled(
+    flashcards.map(async (flashcard) => {
+      const rephrasedText = await rephraseQuestionWithAI(flashcard, moduleName);
+      const imageUrl = await generateImageForQuestion(rephrasedText, flashcard, moduleName);
+
+      return {
+        id: `q_${flashcard.id}_pre_${Date.now()}`,
+        flashcardId: flashcard.id,
+        type: 'free_recall',
+        question: rephrasedText,
+        correctAnswer: flashcard.content,
+        options: null,
+        imageUrl: imageUrl || null,
+      };
+    })
+  );
+
+  return results
+    .filter(r => r.status === 'fulfilled')
+    .map(r => r.value);
+}
+
 // ============================================================
 // Adaptive Question Selection
 // ============================================================
@@ -312,8 +354,8 @@ export async function getNextQuestion(sessionId) {
   if (!session) throw new Error('Session not found');
   if (session.status !== 'active') throw new Error('Session is not active');
 
-  // Fast path for pre-generated questions (e.g. 8 multiple-choice batch)
-  if (session.type === 'multiple_choice' && session.preGeneratedQuestions) {
+  // Fast path for pre-generated questions (multiple-choice batch or pre-generated image)
+  if (session.preGeneratedQuestions) {
     if (session.currentFlashcardIndex >= session.preGeneratedQuestions.length) return null;
 
     const question = session.preGeneratedQuestions[session.currentFlashcardIndex];
@@ -1064,13 +1106,16 @@ export async function buildSessionSummary(sessionId) {
     totalScoreChange += r.scoreChange || 0;
   });
 
-  // Get updated flashcard scores
+  // Get updated flashcard scores via batch read (single Firestore request)
   const flashcardScores = {};
-  for (const flashcardId of session.flashcardIds) {
-    const fcDoc = await db.collection('flashcards').doc(flashcardId).get();
-    if (fcDoc.exists) {
-      flashcardScores[flashcardId] = fcDoc.data().knowledgeScore || 0;
-    }
+  const fcRefs = session.flashcardIds.map(id => db.collection('flashcards').doc(id));
+  if (fcRefs.length > 0) {
+    const fcDocs = await db.getAll(...fcRefs);
+    fcDocs.forEach(doc => {
+      if (doc.exists) {
+        flashcardScores[doc.id] = doc.data().knowledgeScore || 0;
+      }
+    });
   }
 
   // Get module aggregate score

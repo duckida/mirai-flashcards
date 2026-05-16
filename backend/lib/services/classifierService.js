@@ -135,17 +135,19 @@ Content: "${contentText}"`;
  * @returns {Promise<ClassificationResult[]>}
  */
 async function batchClassifyFlashcards(flashcards, existingModuleNames = []) {
-  const results = [];
-  let updatedModules = [...existingModuleNames];
+  if (flashcards.length === 0) return [];
 
-  for (const flashcard of flashcards) {
-    const result = await classifyFlashcard(flashcard, updatedModules);
-    results.push(result);
+  // Run all classifications in parallel
+  const classificationResults = await Promise.allSettled(
+    flashcards.map(flashcard => classifyFlashcard(flashcard, existingModuleNames))
+  );
 
-    if (result.success && result.assignment.action === 'new') {
-      updatedModules.push(result.assignment.moduleName);
+  const results = classificationResults.map((result, index) => {
+    if (result.status === 'fulfilled') {
+      return result.value;
     }
-  }
+    return { success: false, error: `Flashcard ${index + 1}: ${result.reason?.message || 'Classification failed'}` };
+  });
 
   return results;
 }

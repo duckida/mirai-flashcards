@@ -30,6 +30,7 @@ function FlashcardPreview({ flashcard, index }) {
             <img 
               src={flashcard.sourceImageUrl} 
               alt={`Flashcard ${index + 1}`} 
+              loading="lazy"
               className="w-full max-w-md mx-auto"
             />
           </div>
@@ -256,7 +257,7 @@ export default function UploadImageScreen({ onBack, onSuccess }) {
               <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => handleFileSelect(e.target.files?.[0])} className="hidden" />
               {previewUrl ? (
                 <div className="w-full">
-                  <img src={previewUrl} alt="Preview" className="max-w-full max-h-56 rounded-xl mb-3 mx-auto" />
+                  <img src={previewUrl} alt="Preview" loading="lazy" className="max-w-full max-h-56 rounded-xl mb-3 mx-auto" />
                   <p className="text-sm text-text-secondary truncate max-w-full">{selectedFile?.name} ({(selectedFile?.size / 1024 / 1024).toFixed(2)} MB)</p>
                 </div>
               ) : (
