@@ -154,12 +154,6 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
                   />
                 </div>
               )}
-
-              {flashcard?.content && (
-                <div className="rounded-xl bg-bg-muted p-4 text-sm text-text-primary whitespace-pre-wrap break-words">
-                  {flashcard.content}
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>

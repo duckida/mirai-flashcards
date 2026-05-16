@@ -887,58 +887,87 @@ export async function evaluateResponse(sessionId, questionId, userAnswer) {
   if (!session) throw new Error('Session not found');
   if (session.status !== 'active') throw new Error('Session is not active');
 
-  // Find the flashcard from the question ID
-  const flashcardId = questionId.includes('_batch_') || questionId.includes('_fallback_') 
-    ? questionId.split('_')[1] 
-    : questionId.split('_')[1];
-  
-  const flashcardDoc = await db.collection('flashcards').doc(flashcardId).get();
+  let isCorrect = false;
+  let confidence = 0;
+  let correctAnswerText = '';
+  let feedbackText = '';
+  let flashcardId = null;
 
+  // Fast path for pre-generated multiple choice questions
+  if (session.type === 'multiple_choice' && session.preGeneratedQuestions) {
+    const question = session.preGeneratedQuestions.find(q => q.id === questionId);
+    if (question) {
+      flashcardId = question.flashcardId;
+      correctAnswerText = question.correctAnswer;
+      isCorrect = userAnswer === question.correctAnswer;
+      confidence = isCorrect ? 1.0 : 0.9;
+      feedbackText = isCorrect
+        ? "Correct! That is exactly right."
+        : `Not quite. The correct answer is: "${question.correctAnswer}"`;
+
+      const scoreResult = await updateFlashcardScore(flashcardId, isCorrect, confidence);
+
+      const response = {
+        flashcardId,
+        questionId,
+        questionType: 'multiple_choice',
+        userAnswer,
+        correctAnswer: correctAnswerText,
+        isCorrect,
+        scoreChange: scoreResult.scoreDelta,
+        confidence,
+        timestamp: new Date(),
+      };
+
+      const updates = {
+        responses: [...(session.responses || []), response],
+        scoreChanges: {
+          ...session.scoreChanges,
+          [flashcardId]: scoreResult.newScore,
+        },
+      };
+
+      if (isCorrect) {
+        updates.totalCorrect = (session.totalCorrect || 0) + 1;
+      } else {
+        updates.totalIncorrect = (session.totalIncorrect || 0) + 1;
+      }
+
+      await db.collection('quiz_sessions').doc(sessionId).update(updates);
+
+      return {
+        isCorrect,
+        scoreChange: scoreResult.scoreDelta,
+        newScore: scoreResult.newScore,
+        feedback: feedbackText,
+        correctAnswer: correctAnswerText,
+      };
+    }
+  }
+
+  // Legacy / fallback path for non-pre-generated questions
+  flashcardId = questionId.split('_')[1];
+
+  const flashcardDoc = await db.collection('flashcards').doc(flashcardId).get();
   if (!flashcardDoc.exists) {
     throw new Error(`Flashcard ${flashcardId} not found`);
   }
 
   const flashcard = { id: flashcardDoc.id, ...flashcardDoc.data() };
 
-  let isCorrect = false;
-  let confidence = 0;
-  let correctAnswerText = '';
-  let feedbackText = '';
+  const originalQuestion = session.lastQuestion || 'General understanding';
+  const evalResult = await evaluateWithAI(
+    flashcard.content || '',
+    userAnswer,
+    originalQuestion
+  );
+  isCorrect = evalResult.isCorrect;
+  confidence = evalResult.confidence;
+  correctAnswerText = flashcard.content?.substring(0, 200) || '';
+  feedbackText = generateFeedback(isCorrect, correctAnswerText, userAnswer, confidence);
 
-  // Fast path for pre-generated multiple choice questions
-  if (session.type === 'multiple_choice' && session.preGeneratedQuestions) {
-    const question = session.preGeneratedQuestions.find(q => q.id === questionId);
-    if (question) {
-      correctAnswerText = question.correctAnswer;
-      // Since it's multiple choice, the user answer should match the exact option text
-      isCorrect = userAnswer === question.correctAnswer;
-      confidence = isCorrect ? 1.0 : 0.9;
-      feedbackText = isCorrect 
-        ? "Correct! That is exactly right." 
-        : `Not quite. The correct answer is: "${question.correctAnswer}"`;
-    }
-  }
-
-  if (!correctAnswerText) {
-    // Legacy / fallback path
-    const originalQuestion = session.lastQuestion || 'General understanding';
-    
-    // Use AI to evaluate the answer against the content
-    const evalResult = await evaluateWithAI(
-      flashcard.content || '',
-      userAnswer,
-      originalQuestion
-    );
-    isCorrect = evalResult.isCorrect;
-    confidence = evalResult.confidence;
-    correctAnswerText = flashcard.content?.substring(0, 200) || '';
-    feedbackText = generateFeedback(isCorrect, correctAnswerText, userAnswer, confidence);
-  }
-
-  // Update score via scoring service
   const scoreResult = await updateFlashcardScore(flashcardId, isCorrect, confidence);
 
-  // Record response in session
   const response = {
     flashcardId,
     questionId,
@@ -951,7 +980,6 @@ export async function evaluateResponse(sessionId, questionId, userAnswer) {
     timestamp: new Date(),
   };
 
-  // Update session
   const updates = {
     responses: [...(session.responses || []), response],
     scoreChanges: {
