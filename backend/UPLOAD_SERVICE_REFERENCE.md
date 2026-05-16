@@ -1,6 +1,6 @@
 # Upload Service Reference
 
-Quick reference for using the image upload service in the AI Flashcard Quizzer backend.
+Quick reference for using the image upload service in the Mirai Flashcards backend.
 
 ## Service Location
 

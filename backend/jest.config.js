@@ -1,5 +1,5 @@
 /**
- * Jest configuration for AI Flashcard Quizzer Backend
+ * Jest configuration for Mirai Flashcards Backend
  */
 
 export default {

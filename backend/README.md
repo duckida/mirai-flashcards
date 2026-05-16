@@ -1,6 +1,6 @@
-# AI Flashcard Quizzer - Backend
+# Mirai Flashcards - Backend
 
-This is the backend Next.js application for the AI Flashcard Quizzer, an AI-powered flashcard learning app that digitizes physical notes through image scanning and provides interactive voice and visual quiz experiences.
+This is the backend Next.js application for the Mirai Flashcards, an AI-powered flashcard learning app that digitizes physical notes through image scanning and provides interactive voice and visual quiz experiences.
 
 ## Features
 

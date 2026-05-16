@@ -158,7 +158,7 @@ An AI-powered flashcard learning app built for a hackathon. Users photograph phy
 
 1. THE App SHALL implement all screens and UI components using React as the UI framework.
 2. THE App SHALL use Tailwind CSS for utility-first styling and shadcn/ui for reusable components.
-3. THE App SHALL use the purple accent theme with rounded elements for a modern aesthetic.
+3. THE App SHALL use the Kakao-inspired theme (yellow primary #FEE500, black text #1A1A1A, gray secondary) with rounded elements for a modern aesthetic.
 4. WHEN a new screen or UI component is added, THE App SHALL use shadcn/ui components (Button, Card, Badge, Progress, Input, Textarea, Spinner) with Tailwind CSS classes.
 
 ---

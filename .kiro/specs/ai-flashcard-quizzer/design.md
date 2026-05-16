@@ -1,8 +1,8 @@
-# Design Document: AI Flashcard Quizzer
+# Design Document: Mirai Flashcards
 
 ## Overview
 
-The AI Flashcard Quizzer is a web application that enables users to digitize physical notes into interactive flashcards through image scanning, organize them into topic-based modules, and engage with them through multiple quiz modalities including voice-based sessions and AI-assisted visual quizzes. The system leverages AI vision for content extraction, real-time speech synthesis for interactive quizzing, and generative AI for dynamic question creation and visual content generation.
+The Mirai Flashcards is a web application that enables users to digitize physical notes into interactive flashcards through image scanning, organize them into topic-based modules, and engage with them through multiple quiz modalities including voice-based sessions and AI-assisted visual quizzes. The system leverages AI vision for content extraction, real-time speech synthesis for interactive quizzing, and generative AI for dynamic question creation and visual content generation.
 
 ### Key Design Principles
 

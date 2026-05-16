@@ -87,7 +87,7 @@ describe('GeminiProvider', () => {
         provider: 'gemini',
         connectionType: 'websocket',
         clientLibrary: null,
-        model: 'gemini-2.5-flash-native-audio-latest',
+        model: 'gemini-3.1-flash-live-preview',
       });
     });
   });

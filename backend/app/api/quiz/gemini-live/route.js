@@ -13,7 +13,7 @@ export const GET = apiHandler(async () => {
     return errorResponse('GEMINI_API_KEY not configured', 500);
   }
 
-  const model = 'gemini-2.5-flash-native-audio-preview-12-2025';
+  const model = 'gemini-3.1-flash-live-preview';
 
   try {
     const ai = new GoogleGenAI({

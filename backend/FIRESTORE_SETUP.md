@@ -1,6 +1,6 @@
 # Firestore Project Setup Guide
 
-This guide walks through setting up a Firebase project with Firestore database and configuring the Firebase Admin SDK for the AI Flashcard Quizzer backend.
+This guide walks through setting up a Firebase project with Firestore database and configuring the Firebase Admin SDK for the Mirai Flashcards backend.
 
 ## Overview
 

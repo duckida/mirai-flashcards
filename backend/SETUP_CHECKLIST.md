@@ -1,6 +1,6 @@
-# Setup Checklist - AI Flashcard Quizzer
+# Setup Checklist - Mirai Flashcards
 
-Use this checklist to ensure you have completed all setup steps for the AI Flashcard Quizzer backend.
+Use this checklist to ensure you have completed all setup steps for the Mirai Flashcards backend.
 
 ## Local Development Setup
 

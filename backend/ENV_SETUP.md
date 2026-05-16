@@ -1,6 +1,6 @@
 # Environment Variables Setup Guide
 
-This guide explains how to obtain and configure all required environment variables for the AI Flashcard Quizzer application.
+This guide explains how to obtain and configure all required environment variables for the Mirai Flashcards application.
 
 ## Quick Start
 

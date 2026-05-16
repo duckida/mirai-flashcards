@@ -1,8 +1,8 @@
-# Tasks: AI Flashcard Quizzer
+# Tasks: Mirai Flashcards
 
 ## Overview
 
-This document breaks down the AI Flashcard Quizzer specification into concrete, actionable implementation tasks organized by functional area. Tasks are sequenced to respect dependencies and grouped hierarchically for clarity.
+This document breaks down the Mirai Flashcards specification into concrete, actionable implementation tasks organized by functional area. Tasks are sequenced to respect dependencies and grouped hierarchically for clarity.
 
 ---
 
@@ -11,7 +11,8 @@ This document breaks down the AI Flashcard Quizzer specification into concrete, 
 ### 1.1 Project Initialization
 - [x] Make a folder for the backend and Initialize Next.js project with JavaScript
 - [x] Make a folder for the frontend and Set up React + Vite + Tailwind CSS + shadcn/ui
-- [x] Set up Tailwind CSS theme (purple accent, light theme, rounded elements) and shadcn/ui components
+- [x] Set up Tailwind CSS theme (Kakao yellow accent, light theme, rounded elements) and shadcn/ui components
+- [x] Apply Kakao theme across all frontend screens and components
 
 ### 1.2 Environment and Deployment Setup
 - [x] Set up Vercel project and environment variables (this is for me to do)

@@ -9,7 +9,7 @@
 
 ## Overview
 
-This implementation sets up Vercel Storage (Blob Storage) for the AI Flashcard Quizzer backend to handle image uploads for flashcard digitization. The system validates image formats (JPEG, PNG, WEBP) and enforces a 20MB file size limit as specified in Requirement 2.
+This implementation sets up Vercel Storage (Blob Storage) for the Mirai Flashcards backend to handle image uploads for flashcard digitization. The system validates image formats (JPEG, PNG, WEBP) and enforces a 20MB file size limit as specified in Requirement 2.
 
 ## What Was Implemented
 

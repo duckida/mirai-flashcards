@@ -2,7 +2,7 @@
 
 ## Overview
 
-This design introduces multi-provider voice support for the AI Flashcard Quizzer, enabling dynamic switching between ElevenLabs and Gemini 2.5 Flash Native Audio providers. Firebase Remote Config controls provider selection at runtime, supporting A/B testing, gradual rollouts, and instant failover without code deployments.
+This design introduces multi-provider voice support for the Mirai Flashcards, enabling dynamic switching between ElevenLabs and Gemini 2.5 Flash Native Audio providers. Firebase Remote Config controls provider selection at runtime, supporting A/B testing, gradual rollouts, and instant failover without code deployments.
 
 The architecture maintains backward compatibility with existing ElevenLabs integration while introducing a provider abstraction layer that normalizes differences between voice services. The frontend VoiceQuizScreen remains unchanged from a user perspective, with provider-specific logic encapsulated in adapter classes.
 

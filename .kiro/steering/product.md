@@ -1,8 +1,8 @@
-# AI Flashcard Quizzer - Product Overview
+# Mirai Flashcards - Product Overview
 
 ## What is it?
 
-AI Flashcard Quizzer is an AI-powered learning platform that digitizes physical notes through image scanning and provides interactive quiz experiences. Users photograph their handwritten or printed notes, the system extracts flashcards using AI vision, automatically organizes them into topics, and then delivers personalized quizzes through voice, images, or text.
+Mirai Flashcards is an AI-powered learning platform that digitizes physical notes through image scanning and provides interactive quiz experiences. Users photograph their handwritten or printed notes, the system extracts flashcards using AI vision, automatically organizes them into topics, and then delivers personalized quizzes through voice, images, or text.
 
 ## Core Value Proposition
 

@@ -39,6 +39,13 @@ export const flashcardService = {
     return apiClient.delete(`/api/flashcards/${flashcardId}`)
   },
 
+  async uploadImage(file) {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('userId', 'crop-upload')
+    return apiClient.upload('/api/flashcards/upload', formData)
+  },
+
   async getAllUserFlashcards(userId) {
     const modulesData = await apiClient.get(`/api/modules?userId=${userId}`)
     const modules = modulesData.modules || []
@@ -51,7 +58,8 @@ export const flashcardService = {
           return (data.flashcards || []).map((card) => ({
             ...card,
             moduleName: mod.name,
-            moduleColor: mod.color || '#9333EA',
+            moduleColor: mod.color || '#FEE500',
+            moduleIcon: mod.icon || null,
           }))
         } catch {
           return []

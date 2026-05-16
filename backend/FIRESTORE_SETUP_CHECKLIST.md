@@ -1,6 +1,6 @@
 # Firestore Setup Checklist
 
-This checklist guides you through setting up Firestore for the AI Flashcard Quizzer application.
+This checklist guides you through setting up Firestore for the Mirai Flashcards application.
 
 ## Phase 1: Firebase Project Creation
 

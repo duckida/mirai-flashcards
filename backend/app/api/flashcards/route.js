@@ -113,6 +113,7 @@ export const POST = apiHandler(async (request) => {
           flashcardCount: 0,
           aggregateKnowledgeScore: 0,
           color: getRandomModuleColor(),
+          icon: null,
           createdAt: new Date(),
           updatedAt: new Date(),
         });

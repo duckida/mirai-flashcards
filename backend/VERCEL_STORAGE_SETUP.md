@@ -1,6 +1,6 @@
 # Vercel Storage Configuration Guide
 
-This guide explains how to set up Vercel Storage (Blob Storage) for the AI Flashcard Quizzer backend to handle image uploads.
+This guide explains how to set up Vercel Storage (Blob Storage) for the Mirai Flashcards backend to handle image uploads.
 
 ## Overview
 

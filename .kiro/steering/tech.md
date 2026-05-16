@@ -41,7 +41,7 @@ This is a full-stack JavaScript application with a Next.js backend and React fro
 
 **Styling**: Tailwind CSS v4
 - Utility classes for all styling
-- Custom theme with purple primary colors
+- Kakao-inspired theme (yellow primary #FEE500, black text #1A1A1A, gray secondary)
 - Responsive design with Tailwind breakpoints
 
 **Module System**: ES Modules (both frontend and backend)

@@ -1,4 +1,4 @@
-# Quick Start Guide - AI Flashcard Quizzer
+# Quick Start Guide - Mirai Flashcards
 
 Get up and running in 5 minutes! This guide covers the absolute essentials.
 

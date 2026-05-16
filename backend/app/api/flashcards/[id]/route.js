@@ -80,6 +80,14 @@ export const PATCH = apiHandler(async (request, { params }) => {
     updates.answer = body.answer.trim();
   }
 
+  if (body.sourceImageUrl !== undefined) {
+    updates.sourceImageUrl = body.sourceImageUrl;
+  }
+
+  if (body.displayImageUrl !== undefined) {
+    updates.displayImageUrl = body.displayImageUrl;
+  }
+
   // Handle module reassignment
   if (body.moduleId !== undefined) {
     const oldData = flashcardDoc.data();

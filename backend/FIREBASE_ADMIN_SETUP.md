@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide explains how the Firebase Admin SDK is configured for the AI Flashcard Quizzer backend. The Admin SDK enables server-side operations with Firestore, including user management, flashcard persistence, quiz session tracking, and more.
+This guide explains how the Firebase Admin SDK is configured for the Mirai Flashcards backend. The Admin SDK enables server-side operations with Firestore, including user management, flashcard persistence, quiz session tracking, and more.
 
 ## Current Configuration Status
 

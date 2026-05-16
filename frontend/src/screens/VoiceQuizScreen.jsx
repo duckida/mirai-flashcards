@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import { Progress } from '@/components/ui/progress'
+import { Mic, Volume2, AlertTriangle, Info, CheckCircle, Loader, MicOff, ThumbsUp, ThumbsDown, ArrowLeft } from 'lucide-react'
 import { voiceService } from '@/services/voiceService'
 import { quizService } from '@/services/quizService'
 
@@ -33,6 +34,7 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
   const [feedbackGiven, setFeedbackGiven] = useState(false)
   const [fallbackNotice, setFallbackNotice] = useState(null)
   const sessionRef = useRef(null)
+  const isConnectingRef = useRef(false)
   const lastAgentMessageRef = useRef(null)
 
   const addTranscript = useCallback((role, text) => {
@@ -87,6 +89,15 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
   }
 
   const startVoiceQuiz = useCallback(async () => {
+    if (isConnectingRef.current || status === STATUS.CONNECTING || status === STATUS.REQUESTING_MIC) return;
+    
+    isConnectingRef.current = true;
+
+    if (sessionRef.current) {
+      sessionRef.current.endSession();
+      sessionRef.current = null;
+    }
+
     setError(null)
     setTranscript([])
     setSummary(null)
@@ -128,6 +139,7 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
       })
 
       sessionRef.current = session
+      isConnectingRef.current = false;
 
       const id = session.getId()
       setSessionId(id)
@@ -136,12 +148,12 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
         session.sendContextualUpdate(buildAgentContext())
       }
 
-      // Trigger agent to start the conversation
       session.sendMessage('Hello, please start the quiz.')
     } catch (err) {
       console.error('Failed to start voice conversation:', err)
       setError(`Failed to start voice quiz: ${err.message}`)
       setStatus(STATUS.ERROR)
+      isConnectingRef.current = false;
     }
   }, [handleOnMessage, handleOnModeChange, handleOnCanSendFeedbackChange])
 
@@ -181,17 +193,20 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
 
   return (
     <div className="min-h-screen bg-white overflow-x-hidden">
-      <header className="flex items-center justify-between p-5 border-b border-border">
+      <header className="flex items-center justify-between p-5 ">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-primary-lighter flex items-center justify-center text-xl">
-            🎤
+          <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center">
+            <Mic className="w-5 h-5 text-[#111111]" />
           </div>
           <div>
             <h1 className="text-2xl font-extrabold text-text-primary tracking-tight">Voice Quiz</h1>
             <p className="text-sm text-text-secondary">{moduleName || 'Voice Practice'}</p>
           </div>
         </div>
-        <Button variant="secondary" size="sm" onClick={onBack}>Back</Button>
+        <Button variant="secondary" size="sm" onClick={onBack}>
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </Button>
       </header>
 
       <main className="p-4 max-w-2xl mx-auto">
@@ -199,7 +214,7 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
           <Card className="mb-4 bg-warning-light border-warning">
             <CardContent className="pt-4">
               <div className="flex items-start gap-2">
-                <span>ℹ️</span>
+                <Info className="w-5 h-5 text-warning shrink-0 mt-0.5" />
                 <div>
                   <p className="text-warning font-semibold">Provider Switched</p>
                   <p className="text-warning text-sm mt-1">{fallbackNotice}</p>
@@ -213,7 +228,7 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
           <Card className="mb-4 bg-error-light border-error">
             <CardContent className="pt-4">
               <div className="flex items-start gap-2">
-                <span>⚠️</span>
+                <AlertTriangle className="w-5 h-5 text-error shrink-0 mt-0.5" />
                 <div>
                   <p className="text-error font-semibold">Error</p>
                   <p className="text-error text-sm mt-1 break-words">{error}</p>
@@ -226,7 +241,10 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
         {summary && (
           <Card className="mb-4 bg-success-light border-success">
             <CardHeader>
-              <CardTitle className="text-success">Quiz Complete!</CardTitle>
+              <CardTitle className="text-success flex items-center gap-2">
+                <CheckCircle className="w-5 h-5" />
+                Quiz Complete!
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-4 text-center">
@@ -258,13 +276,17 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               {status === STATUS.CONNECTED ? (
-                mode === MODE.AGENT_SPEAKING ? '🔊 Agent Speaking' : '🎙️ Listening...'
+                mode === MODE.AGENT_SPEAKING ? (
+                  <><Volume2 className="w-5 h-5" /> Agent Speaking</>
+                ) : (
+                  <><Mic className="w-5 h-5" /> Listening...</>
+                )
               ) : status === STATUS.CONNECTING ? (
-                '⏳ Connecting...'
+                <><Loader className="w-5 h-5 animate-spin" /> Connecting...</>
               ) : status === STATUS.ENDED ? (
-                '✅ Session Ended'
+                <><CheckCircle className="w-5 h-5" /> Session Ended</>
               ) : (
-                '🎤 Voice Agent'
+                <><Mic className="w-5 h-5" /> Voice Agent</>
               )}
             </CardTitle>
           </CardHeader>
@@ -284,7 +306,8 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
                   Practice with a voice agent. The agent will quiz you based on the flashcard image.
                 </p>
                 <Button size="lg" onClick={startVoiceQuiz}>
-                  🎤 Start Voice Quiz
+                  <Mic className="w-4 h-4" />
+                  Start Voice Quiz
                 </Button>
               </div>
             )}
@@ -329,9 +352,11 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
                     }`}
                     style={{ animation: 'pulse-dot 2s ease-in-out infinite' }}
                   >
-                    <span className="text-5xl">
-                      {mode === MODE.AGENT_SPEAKING ? '🔊' : '🎙️'}
-                    </span>
+                    {mode === MODE.AGENT_SPEAKING ? (
+                      <Volume2 className="w-12 h-12 text-[#111111]" />
+                    ) : (
+                      <Mic className="w-12 h-12 text-white" />
+                    )}
                   </div>
                 </div>
 
@@ -345,7 +370,7 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
                     onClick={handleToggleMute}
                     className="flex-1"
                   >
-                    {isMuted ? '🔇 Unmute' : '🎙️ Mute'}
+                    {isMuted ? <><MicOff className="w-4 h-4" /> Unmute</> : <><Mic className="w-4 h-4" /> Mute</>}
                   </Button>
                   <Button
                     variant="destructive"
@@ -356,7 +381,7 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
                   </Button>
                 </div>
 
-                {canSendFeedback && !feedbackGiven && lastAgentMessageRef.current && (
+                {canSendFeedback && !feedbackGiven && (
                   <div className="flex gap-2 w-full max-w-xs">
                     <Button
                       variant="outline"
@@ -364,7 +389,8 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
                       className="flex-1"
                       onClick={() => handleSendFeedback(true)}
                     >
-                      👍 Good
+                      <ThumbsUp className="w-4 h-4" />
+                      Good
                     </Button>
                     <Button
                       variant="outline"
@@ -372,7 +398,8 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
                       className="flex-1"
                       onClick={() => handleSendFeedback(false)}
                     >
-                      👎 Poor
+                      <ThumbsDown className="w-4 h-4" />
+                      Poor
                     </Button>
                   </div>
                 )}

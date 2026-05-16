@@ -2,7 +2,7 @@
 
 ## Task 1.2: Set up Firestore project and authentication
 
-This document summarizes the Firestore setup for the AI Flashcard Quizzer backend.
+This document summarizes the Firestore setup for the Mirai Flashcards backend.
 
 ## What Was Completed
 

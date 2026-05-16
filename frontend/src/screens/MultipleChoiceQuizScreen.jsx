@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Spinner } from '@/components/ui/spinner';
 import { Badge } from '@/components/ui/badge';
+import { Loader, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
 import useAuth from '@/hooks/useAuth';
 import { quizService } from '@/services/quizService';
 
@@ -128,7 +129,7 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-bg gap-6 p-6">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white gap-6 p-6">
         {flashcard?.sourceImageUrl && (
           <div className="w-full max-w-sm rounded-xl overflow-hidden shadow-lg bg-white">
             <img 
@@ -150,21 +151,27 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
 
   if (error) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-bg gap-4 p-6">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white gap-4 p-6">
         <div className="text-center">
           <p className="text-error font-medium mb-2">Error</p>
           <p className="text-text-secondary text-sm mb-4">{error}</p>
         </div>
-        <Button onClick={onBack}>Go Back</Button>
+        <Button onClick={onBack}>
+          <ArrowLeft className="w-4 h-4" />
+          Go Back
+        </Button>
       </div>
     );
   }
 
   if (!questions || questions.length === 0) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-bg gap-4">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white gap-4">
         <p className="text-text-secondary">No questions available.</p>
-        <Button onClick={onBack}>Go Back</Button>
+        <Button onClick={onBack}>
+          <ArrowLeft className="w-4 h-4" />
+          Go Back
+        </Button>
       </div>
     );
   }
@@ -174,17 +181,20 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
   const isLastQuestion = currentQuestionIndex === questions.length - 1;
 
   return (
-    <div className="min-h-screen bg-bg flex flex-col overflow-x-hidden">
-      <header className="sticky top-0 z-10 flex items-center justify-between p-4 border-b border-border bg-white shadow-sm">
+    <div className="min-h-screen bg-white flex flex-col overflow-x-hidden">
+      <header className="sticky top-0 z-10 flex items-center justify-between p-4  bg-bg-muted">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-bold text-text-primary">Text Quiz</h1>
           <Badge variant="secondary">{currentQuestionIndex + 1} / {questions.length}</Badge>
         </div>
-        <Button variant="outline" size="sm" onClick={onBack} disabled={isSubmitting}>Cancel</Button>
+        <Button variant="outline" size="sm" onClick={onBack} disabled={isSubmitting}>
+          <ArrowLeft className="w-4 h-4" />
+          Cancel
+        </Button>
       </header>
 
       <div className="flex-1 flex flex-col">
-        <div className="p-2 bg-white border-b border-border">
+        <div className="p-2 bg-white ">
           <Progress value={progress} indicatorClassName="bg-primary" className="h-2" />
         </div>
 
@@ -192,7 +202,7 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
           <Card className={`shadow-sm ${feedback ? (feedback.isCorrect ? 'border-2 border-success' : 'border-2 border-error') : ''}`}>
             <CardHeader>
               <div className="flex items-center gap-3 mb-2">
-                <span className="w-10 h-10 rounded-full bg-primary-lighter text-primary font-bold flex items-center justify-center text-lg shrink-0">
+                <span className="w-10 h-10 rounded-full bg-primary text-[#111111] font-bold flex items-center justify-center text-lg shrink-0">
                   {currentQuestionIndex + 1}
                 </span>
                 <CardTitle className="text-xl leading-relaxed m-0 break-words">
@@ -219,7 +229,7 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
                   }
                 } else if (option === selectedOption) {
                   btnVariant = "secondary";
-                  btnClass += " border-primary bg-primary-lighter text-primary font-medium";
+                  btnClass += " border-primary bg-primary text-[#111111] font-medium";
                 }
 
                 return (
@@ -238,7 +248,11 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
               {feedback && (
                 <div className={`mt-4 p-4 rounded-xl text-sm border-l-4 break-words ${feedback.isCorrect ? 'bg-success-light/30 border-l-success' : 'bg-error-light/30 border-l-error'}`}>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xl">{feedback.isCorrect ? '✅' : '❌'}</span>
+                    {feedback.isCorrect ? (
+                      <CheckCircle className="w-5 h-5 text-success" />
+                    ) : (
+                      <XCircle className="w-5 h-5 text-error" />
+                    )}
                     <span className="font-bold text-base">
                       {feedback.isCorrect ? 'Correct!' : 'Incorrect'}
                     </span>
@@ -265,7 +279,7 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
               onClick={handleSubmitAnswer}
               disabled={!selectedOption || isSubmitting}
             >
-              {isSubmitting ? <Spinner size="sm" className="mr-2" /> : null}
+              {isSubmitting ? <Loader className="w-4 h-4 animate-spin mr-2" /> : null}
               {isSubmitting ? 'Checking...' : 'Check Answer'}
             </Button>
           ) : (
@@ -275,8 +289,8 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
               onClick={handleNextQuestion}
               disabled={isSubmitting}
             >
-              {isSubmitting ? <Spinner size="sm" className="mr-2" /> : null}
-              {isSubmitting ? 'Finishing...' : (isLastQuestion ? 'See Results' : 'Next Question →')}
+              {isSubmitting ? <Loader className="w-4 h-4 animate-spin mr-2" /> : null}
+              {isSubmitting ? 'Finishing...' : (isLastQuestion ? 'See Results' : 'Next Question')}
             </Button>
           )}
         </div>

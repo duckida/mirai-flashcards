@@ -98,6 +98,9 @@ export const PATCH = apiHandler(async (request, { params }) => {
   if (body.color !== undefined) {
     updates.color = body.color;
   }
+  if (body.icon !== undefined) {
+    updates.icon = body.icon;
+  }
 
   if (Object.keys(updates).length === 0) {
     return errorResponse('No updates provided', 400);

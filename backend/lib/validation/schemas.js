@@ -1,7 +1,7 @@
 /**
  * Firestore Data Validation Module
  * Provides field-level, document-level, referential integrity, and type validation
- * for all Firestore collections used in the AI Flashcard Quizzer.
+ * for all Firestore collections used in the Mirai Flashcards.
  */
 
 // ============================================
@@ -183,6 +183,14 @@ export function validateModule(data, isUpdate = false) {
       errors.color = 'color must be a string or null';
     } else if (!/^#[0-9A-Fa-f]{6}$/.test(data.color)) {
       errors.color = 'color must be a valid hex color (e.g., #FF5733)';
+    }
+  }
+
+  if (data.icon !== undefined && data.icon !== null) {
+    if (!isString(data.icon)) {
+      errors.icon = 'icon must be a string or null';
+    } else if (data.icon.length > 50) {
+      errors.icon = 'icon must be at most 50 characters';
     }
   }
 
@@ -556,6 +564,7 @@ export function createModuleDefaults(overrides = {}) {
     flashcardCount: 0,
     aggregateKnowledgeScore: 0,
     color: null,
+    icon: null,
     ...overrides,
   };
 }

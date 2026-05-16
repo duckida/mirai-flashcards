@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
+import { AlertTriangle, Library } from 'lucide-react'
 import useAuth from '@/hooks/useAuth'
 
 export default function AuthScreen() {
@@ -14,13 +15,13 @@ export default function AuthScreen() {
       <Card className="max-w-md w-full">
         <CardContent className="pt-10 pb-8 px-10">
           <div className="flex flex-col items-center gap-6">
-            <div className="w-20 h-20 rounded-3xl bg-primary-lighter border-2 border-primary flex items-center justify-center text-4xl">
-              📚
+            <div className="w-20 h-20 rounded-3xl bg-primary border-0 flex items-center justify-center">
+              <Library className="w-10 h-10 text-[#111111]" />
             </div>
 
             <div className="text-center">
               <h1 className="text-3xl font-extrabold text-text-primary tracking-tight mb-2">
-                AI Flashcard Quizzer
+                Mirai Flashcards
               </h1>
               <p className="text-base text-text-secondary">
                 Digitize your notes and learn with AI-powered quizzes
@@ -29,7 +30,7 @@ export default function AuthScreen() {
 
             {error && (
               <div className="w-full flex items-center gap-2 px-4 py-3 rounded-xl bg-error-light border border-error">
-                <span>⚠️</span>
+                <AlertTriangle className="w-4 h-4 text-error shrink-0" />
                 <span className="text-error text-sm font-medium">{error}</span>
               </div>
             )}
@@ -37,20 +38,13 @@ export default function AuthScreen() {
             {isLoading ? (
               <div className="flex flex-col items-center gap-3 py-4">
                 <Spinner size="lg" />
-                <span className="text-text-secondary">Connecting to Civic.ai...</span>
+                <span className="text-text-secondary">Connecting...</span>
               </div>
             ) : (
               <Button className="w-full" size="lg" onClick={login}>
-                Sign in with Civic
+                Sign In
               </Button>
             )}
-
-            <div className="flex items-center gap-2 px-4 py-3 bg-primary-lighter rounded-full">
-              <span className="text-sm">🔒</span>
-              <span className="text-sm text-text-secondary font-medium">
-                Secure authentication powered by Civic.ai
-              </span>
-            </div>
           </div>
         </CardContent>
       </Card>

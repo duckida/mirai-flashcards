@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { Trophy, BarChart3, Eye, EyeOff, BookOpen, RefreshCw, CheckCircle, XCircle, ArrowLeft } from 'lucide-react'
 
 function ScoreChangeItem({ flashcardId, result, flashcards }) {
   const flashcard = flashcards?.find((fc) => fc.id === flashcardId)
@@ -14,7 +15,11 @@ function ScoreChangeItem({ flashcardId, result, flashcards }) {
       <CardContent className="pt-4 pb-4">
         <div className="flex justify-between items-center mb-2">
           <div className="flex items-center gap-2 flex-1">
-            <span className="text-lg">{result.isCorrect ? '✅' : '❌'}</span>
+            {result.isCorrect ? (
+              <CheckCircle className="w-5 h-5 text-success shrink-0" />
+            ) : (
+              <XCircle className="w-5 h-5 text-error shrink-0" />
+            )}
             <span className="text-text-primary text-sm truncate flex-1">
               {cardPreview}
             </span>
@@ -47,7 +52,10 @@ export default function QuizResultsScreen({ summary, flashcards, moduleId, modul
       <div className="min-h-screen flex items-center justify-center bg-white p-4">
         <div className="text-center">
           <p className="text-text-secondary mb-4">No quiz results available.</p>
-          <Button onClick={() => onNavigate?.('module_detail', moduleId)}>Return to Module</Button>
+          <Button onClick={() => onNavigate?.('module_detail', moduleId)}>
+            <BookOpen className="w-4 h-4" />
+            Return to Module
+          </Button>
         </div>
       </div>
     )
@@ -61,15 +69,20 @@ export default function QuizResultsScreen({ summary, flashcards, moduleId, modul
 
   return (
     <div className="min-h-screen bg-white overflow-x-hidden">
-      <header className="flex items-center justify-between p-5 border-b border-border">
+      <header className="flex items-center justify-between p-5 ">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-success-light flex items-center justify-center text-xl">🏆</div>
+          <div className="w-10 h-10 rounded-2xl bg-success-light flex items-center justify-center">
+            <Trophy className="w-5 h-5 text-success" />
+          </div>
           <div>
             <h1 className="text-2xl font-extrabold text-text-primary">Quiz Complete!</h1>
             <p className="text-sm text-text-secondary">Session Summary</p>
           </div>
         </div>
-        <Button variant="secondary" size="sm" onClick={() => onNavigate?.('module_detail', moduleId)}>← Back</Button>
+        <Button variant="secondary" size="sm" onClick={() => onNavigate?.('module_detail', moduleId)}>
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </Button>
       </header>
 
       <main className="p-4 max-w-2xl mx-auto space-y-4">
@@ -109,7 +122,10 @@ export default function QuizResultsScreen({ summary, flashcards, moduleId, modul
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">📊 Score Changes</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5" />
+              Score Changes
+            </CardTitle>
             <Badge variant={summary.totalScoreChange >= 0 ? 'success' : 'error'}>
               {summary.totalScoreChange >= 0 ? '+' : ''}{summary.totalScoreChange} total
             </Badge>
@@ -126,7 +142,7 @@ export default function QuizResultsScreen({ summary, flashcards, moduleId, modul
         </Card>
 
         <Button variant="secondary" className="w-full" onClick={() => setShowDetails(!showDetails)}>
-          {showDetails ? '🙈 Hide Details' : '👁️ Show Detailed Results'}
+          {showDetails ? <><EyeOff className="w-4 h-4" /> Hide Details</> : <><Eye className="w-4 h-4" /> Show Detailed Results</>}
         </Button>
 
         {showDetails && summary.responses && (
@@ -140,11 +156,13 @@ export default function QuizResultsScreen({ summary, flashcards, moduleId, modul
 
         <div className="flex gap-3 flex-wrap">
           <Button className="flex-1 min-w-[120px]" size="lg" onClick={() => onNavigate?.('module_detail', moduleId)}>
-            📚 Return to Module
+            <BookOpen className="w-4 h-4" />
+            Return to Module
           </Button>
           {summary.incorrect > 0 && (
             <Button variant="outline" className="flex-1 min-w-[120px]" size="lg" onClick={onReviewWeak}>
-              🔄 Review Weak Cards
+              <RefreshCw className="w-4 h-4" />
+              Review Weak Cards
             </Button>
           )}
         </div>

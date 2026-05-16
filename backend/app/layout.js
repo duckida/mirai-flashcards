@@ -12,7 +12,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "AI Flashcard Quizzer",
+  title: "Mirai Flashcards",
   description: "AI-powered flashcard learning app",
 };
 

@@ -1,6 +1,6 @@
 # Vercel Deployment Quick Reference
 
-This guide provides step-by-step instructions for deploying the AI Flashcard Quizzer backend to Vercel.
+This guide provides step-by-step instructions for deploying the Mirai Flashcards backend to Vercel.
 
 ## Prerequisites
 

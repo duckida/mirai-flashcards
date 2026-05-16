@@ -55,7 +55,7 @@ export const GET = apiHandler(async (request) => {
  */
 export const POST = apiHandler(async (request) => {
   const body = await request.json();
-  const { userId, name, description, color } = body;
+  const { userId, name, description, color, icon } = body;
 
   if (!userId) {
     return errorResponse('User ID is required', 400);
@@ -73,6 +73,7 @@ export const POST = apiHandler(async (request) => {
     flashcardCount: 0,
     aggregateKnowledgeScore: 0,
     color: color || getRandomModuleColor(),
+    icon: icon || null,
     createdAt: new Date(),
     updatedAt: new Date(),
   };

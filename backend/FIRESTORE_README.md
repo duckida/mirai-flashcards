@@ -2,7 +2,7 @@
 
 ## Overview
 
-This directory contains the complete Firestore setup for the AI Flashcard Quizzer backend. Firestore is used as the primary database for storing users, modules, flashcards, quiz sessions, and presentations.
+This directory contains the complete Firestore setup for the Mirai Flashcards backend. Firestore is used as the primary database for storing users, modules, flashcards, quiz sessions, and presentations.
 
 ## Quick Start (5 minutes)
 

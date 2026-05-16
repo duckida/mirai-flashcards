@@ -1,13 +1,16 @@
 import { useState, useRef, useCallback } from 'react'
+import Cropper from 'react-easy-crop'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Spinner } from '@/components/ui/spinner'
+import { Camera, AlertTriangle, CheckCircle, ArrowLeft, Search, Inbox, X, Plus, Crop as CropIcon, RotateCw } from 'lucide-react'
 import useAuth from '@/hooks/useAuth'
 import { flashcardService } from '@/services/flashcardService'
+import { getCroppedImage } from '@/services/imageCrop'
 
-const STATES = { IDLE: 'idle', UPLOADING: 'uploading', SCANNING: 'scanning', PREVIEW: 'preview', SAVING: 'saving', SUCCESS: 'success', ERROR: 'error' }
+const STATES = { IDLE: 'idle', CROPPING: 'cropping', UPLOADING: 'uploading', SCANNING: 'scanning', PREVIEW: 'preview', SAVING: 'saving', SUCCESS: 'success', ERROR: 'error' }
 
 function FlashcardPreview({ flashcard, index }) {
   const confidence = Math.round((flashcard.confidence || 0) * 100)
@@ -17,7 +20,7 @@ function FlashcardPreview({ flashcard, index }) {
     <Card className="mb-3">
       <CardContent className="pt-4 pb-4">
         <div className="flex items-center gap-2 mb-3">
-          <div className="w-7 h-7 rounded-lg bg-primary-lighter flex items-center justify-center text-primary font-bold text-xs">
+          <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center text-[#111111] font-bold text-xs">
             {index + 1}
           </div>
           <Badge variant={variant}>{confidence}% confidence</Badge>
@@ -48,6 +51,10 @@ export default function UploadImageScreen({ onBack, onSuccess }) {
   const [isDragging, setIsDragging] = useState(false)
   const [saveMessage, setSaveMessage] = useState(null)
 
+  const [crop, setCrop] = useState({ x: 0, y: 0 })
+  const [zoom, setZoom] = useState(1)
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null)
+
   const handleFileSelect = useCallback((file) => {
     if (!file) return
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
@@ -62,6 +69,28 @@ export default function UploadImageScreen({ onBack, onSuccess }) {
     setError(null)
     setSelectedFile(file)
     setPreviewUrl(URL.createObjectURL(file))
+    setState(STATES.CROPPING)
+  }, [])
+
+  const handleApplyCrop = useCallback(async () => {
+    if (!previewUrl || !croppedAreaPixels) return
+    try {
+      const croppedFile = await getCroppedImage(previewUrl, croppedAreaPixels)
+      URL.revokeObjectURL(previewUrl)
+      setSelectedFile(croppedFile)
+      setPreviewUrl(URL.createObjectURL(croppedFile))
+      setState(STATES.IDLE)
+    } catch (err) {
+      setError('Failed to crop image: ' + err.message)
+    }
+  }, [previewUrl, croppedAreaPixels])
+
+  const handleSkipCrop = useCallback(() => {
+    setState(STATES.IDLE)
+  }, [])
+
+  const onCropComplete = useCallback((_, croppedPixels) => {
+    setCroppedAreaPixels(croppedPixels)
   }, [])
 
   const handleUploadAndScan = useCallback(async () => {
@@ -123,38 +152,90 @@ export default function UploadImageScreen({ onBack, onSuccess }) {
     setError(null)
     setUploadProgress(0)
     setSaveMessage(null)
+    setCrop({ x: 0, y: 0 })
+    setZoom(1)
+    setCroppedAreaPixels(null)
   }, [previewUrl])
 
   return (
     <div className="min-h-screen bg-white">
-      <header className="flex items-center justify-between p-5 border-b border-border">
+      <header className="flex items-center justify-between p-5 ">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-primary-lighter flex items-center justify-center text-xl">📷</div>
+          <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center">
+            <Camera className="w-5 h-5 text-[#111111]" />
+          </div>
           <div>
             <h1 className="text-2xl font-extrabold text-text-primary">Upload Image</h1>
             <p className="text-sm text-text-secondary">Scan your notes into flashcards</p>
           </div>
         </div>
-        <Button variant="secondary" size="sm" onClick={onBack}>← Back</Button>
+        <Button variant="secondary" size="sm" onClick={onBack}>
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </Button>
       </header>
 
       <main className="p-4 max-w-2xl mx-auto">
         {error && (
           <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-error-light border border-error mb-4">
-            <span>⚠️</span>
+            <AlertTriangle className="w-4 h-4 text-error shrink-0" />
             <span className="text-error font-medium flex-1">{error}</span>
             <Button variant="secondary" size="sm" onClick={() => setError(null)}>Dismiss</Button>
+          </div>
+        )}
+
+        {state === STATES.CROPPING && previewUrl && (
+          <div className="mb-4">
+            <div className="relative w-full h-[400px] rounded-2xl overflow-hidden bg-[#111]">
+              <Cropper
+                image={previewUrl}
+                crop={crop}
+                zoom={zoom}
+                aspect={4 / 3}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={onCropComplete}
+                classes={{ containerClassName: 'rounded-2xl' }}
+              />
+            </div>
+            <div className="flex items-center gap-4 mt-4">
+              <div className="flex items-center gap-2 flex-1">
+                <RotateCw className="w-4 h-4 text-text-muted shrink-0" />
+                <input
+                  type="range"
+                  min={1}
+                  max={3}
+                  step={0.1}
+                  value={zoom}
+                  onChange={(e) => setZoom(Number(e.target.value))}
+                  className="w-full h-1.5 bg-bg-muted rounded-full appearance-none cursor-pointer accent-[#111]"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-4">
+              <Button variant="secondary" className="flex-1" size="lg" onClick={handleSkipCrop}>
+                <X className="w-4 h-4" />
+                Skip
+              </Button>
+              <Button className="flex-1" size="lg" onClick={handleApplyCrop}>
+                <CropIcon className="w-4 h-4" />
+                Apply Crop
+              </Button>
+            </div>
           </div>
         )}
 
         {state === STATES.SUCCESS && saveMessage && (
           <Card className="mb-4 bg-success-light border-success">
             <CardContent className="pt-8 pb-8 text-center">
-              <div className="text-4xl mb-3">✅</div>
+              <CheckCircle className="w-12 h-12 text-success mx-auto mb-3" />
               <h3 className="text-2xl font-bold text-success mb-2">Flashcards Saved!</h3>
               <p className="text-text-primary mb-4">{saveMessage}</p>
               <div className="flex gap-3 justify-center">
-                <Button onClick={handleReset}>Upload Another</Button>
+                <Button onClick={handleReset}>
+                  <Plus className="w-4 h-4" />
+                  Upload Another
+                </Button>
                 <Button variant="secondary" onClick={onSuccess}>Go to Dashboard</Button>
               </div>
             </CardContent>
@@ -165,7 +246,7 @@ export default function UploadImageScreen({ onBack, onSuccess }) {
           <div>
             <div
               className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all ${
-                isDragging ? 'border-primary bg-primary-lighter' : 'border-border bg-bg-muted hover:border-primary hover:bg-primary-lighter'
+                isDragging ? 'border-primary bg-[#F8F8F8]' : 'border-border bg-bg-muted hover:border-primary hover:bg-[#F8F8F8]'
               }`}
               onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFileSelect(e.dataTransfer?.files?.[0]) }}
               onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
@@ -180,16 +261,25 @@ export default function UploadImageScreen({ onBack, onSuccess }) {
                 </div>
               ) : (
                 <>
-                  <div className="w-20 h-20 rounded-3xl bg-primary-lighter flex items-center justify-center mx-auto mb-4 text-4xl text-primary">+</div>
+                  <div className="w-20 h-20 rounded-3xl bg-primary flex items-center justify-center mx-auto mb-4">
+                    <Plus className="w-10 h-10 text-[#111111]" />
+                  </div>
                   <p className="text-xl font-bold text-text-primary mb-2">Drop image here or click to browse</p>
                   <p className="text-base text-text-secondary">Supports JPEG, PNG, WEBP up to 20MB</p>
                 </>
               )}
             </div>
             {selectedFile && (
-              <Button className="w-full mt-4" size="lg" onClick={handleUploadAndScan}>
-                🔍 Scan Image for Flashcards
-              </Button>
+              <div className="flex gap-3 mt-4">
+                <Button variant="secondary" className="flex-1" size="lg" onClick={() => { setState(STATES.CROPPING); setCrop({ x: 0, y: 0 }); setZoom(1) }}>
+                  <CropIcon className="w-4 h-4" />
+                  Crop
+                </Button>
+                <Button className="flex-1" size="lg" onClick={handleUploadAndScan}>
+                  <Search className="w-4 h-4" />
+                  Scan Image for Flashcards
+                </Button>
+              </div>
             )}
           </div>
         )}
@@ -221,10 +311,10 @@ export default function UploadImageScreen({ onBack, onSuccess }) {
 
         {state === STATES.PREVIEW && (
           <div>
-            <Card className="mb-4 bg-primary-lighter border-primary">
+            <Card className="mb-4 bg-primary border-0">
               <CardContent className="pt-5 pb-5">
                 <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center text-white font-extrabold text-2xl">
+                  <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center text-[#111111] font-extrabold text-2xl">
                     {flashcards.length}
                   </div>
                   <div>
@@ -239,14 +329,18 @@ export default function UploadImageScreen({ onBack, onSuccess }) {
 
             {flashcards.length === 0 && (
               <div className="py-10 text-center bg-bg-muted rounded-2xl">
-                <div className="text-3xl mb-3">📭</div>
+                <Inbox className="w-10 h-10 text-text-muted mx-auto mb-3" />
                 <p className="text-text-secondary">All flashcards removed. Go back to upload a new image.</p>
               </div>
             )}
 
             <div className="flex gap-3 mt-4">
-              <Button variant="secondary" className="flex-1" size="lg" onClick={handleReset}>Cancel</Button>
+              <Button variant="secondary" className="flex-1" size="lg" onClick={handleReset}>
+                <X className="w-4 h-4" />
+                Cancel
+              </Button>
               <Button className="flex-1" size="lg" onClick={handleConfirm}>
+                <CheckCircle className="w-4 h-4" />
                 Save {flashcards.length} Card{flashcards.length !== 1 ? 's' : ''}
               </Button>
             </div>

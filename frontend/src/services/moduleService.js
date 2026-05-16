@@ -18,7 +18,11 @@ export const moduleService = {
     }
   },
 
-  async createModule(userId, name, color) {
-    return apiClient.post('/api/modules', { userId, name, color })
+  async createModule(userId, name, color, icon) {
+    return apiClient.post('/api/modules', { userId, name, color, icon })
+  },
+
+  async updateModule(moduleId, updates) {
+    return apiClient.patch(`/api/modules/${moduleId}`, updates)
   },
 }

@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { Loader } from 'lucide-react'
 import { CivicAuthProvider, useUser } from '@civic/auth/react'
 import AuthScreen from './screens/AuthScreen'
 import DashboardScreen from './screens/DashboardScreen'
@@ -26,12 +27,9 @@ function AppContent() {
   const [currentScreen, setCurrentScreen] = useState(SCREENS.DASHBOARD)
   const [selectedModuleId, setSelectedModuleId] = useState(null)
   const [selectedFlashcard, setSelectedFlashcard] = useState(null)
-  // Task 2.5: Track module name so quiz screens get it without a secondary fetch
   const [selectedModuleName, setSelectedModuleName] = useState(null)
-  // Task 4.6: Track quiz summary for results screen
   const [quizSummary, setQuizSummary] = useState(null)
 
-  // Task 2.7: Updated signature to accept moduleName (and summary for quiz results)
   const navigateTo = useCallback((screen, moduleId, flashcard = null, moduleName = null, summary = null) => {
     setCurrentScreen(screen)
     if (moduleId) setSelectedModuleId(moduleId)
@@ -54,13 +52,10 @@ function AppContent() {
     setQuizSummary(null)
   }, [])
 
-  // Only show the global loading screen on first load (no user yet).
-  // If we already have a user and Civic does a background token refresh,
-  // isLoading briefly flips true — don't unmount the active screen.
   if (isLoading && !user) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white gap-4">
-        <div className="w-12 h-12 border-[3px] border-border border-t-primary rounded-full animate-spin" />
+        <Loader className="w-8 h-8 animate-spin text-text-muted" />
         <p className="text-text-secondary">Loading...</p>
       </div>
     )

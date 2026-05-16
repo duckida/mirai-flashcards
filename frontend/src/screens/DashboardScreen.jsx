@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Spinner } from '@/components/ui/spinner'
 import { Input } from '@/components/ui/input'
+import { Search, Library, Settings, LogOut, BarChart3, Folder, Zap, Mic, Camera, Rocket, AlertTriangle } from 'lucide-react'
+import { ICON_MAP } from '@/components/ModuleCustomizeSheet'
 import useAuth from '@/hooks/useAuth'
 import { moduleService } from '@/services/moduleService'
 import { flashcardService } from '@/services/flashcardService'
@@ -20,19 +22,24 @@ function ModuleCard({ module, onPress }) {
   const score = module.aggregateKnowledgeScore || 0
   const variant = score >= 70 ? 'success' : score >= 40 ? 'warning' : 'error'
   const color = score >= 70 ? 'bg-success' : score >= 40 ? 'bg-warning' : 'bg-error'
+  const ModuleIcon = ICON_MAP[module?.icon]
 
   return (
     <div
-      className="p-5 rounded-2xl border border-border bg-white cursor-pointer transition-all hover:border-primary hover:bg-primary-lighter hover:shadow-md"
+      className="p-5 rounded-2xl  cursor-pointer transition-all hover:border-primary hover:bg-primary-lighter hover:shadow-sm"
       onClick={() => onPress(module)}
     >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
           <div
-            className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-lg"
-            style={{ backgroundColor: module.color || '#9333EA' }}
+            className="w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg"
+            style={{ backgroundColor: module.color || '#FEE500' }}
           >
-            {(module.name || 'M').charAt(0).toUpperCase()}
+            {ModuleIcon ? (
+              <ModuleIcon className="w-6 h-6 text-[#111111]" />
+            ) : (
+              <span className="text-[#111111]">{(module.name || 'M').charAt(0).toUpperCase()}</span>
+            )}
           </div>
           <div>
             <div className="font-bold text-text-primary">{module.name}</div>
@@ -89,7 +96,7 @@ export default function DashboardScreen({ onNavigate }) {
         const cards = await flashcardService.getAllUserFlashcards(user.id)
         if (!cancelled) setAllFlashcards(cards)
       } catch {
-        // silently fail — search just won't have data
+        // search falls back silently
       } finally {
         if (!cancelled) setIsSearching(false)
       }
@@ -112,11 +119,11 @@ export default function DashboardScreen({ onNavigate }) {
   const scoreColor = overallAvg >= 70 ? 'bg-success' : overallAvg >= 40 ? 'bg-warning' : 'bg-error'
 
   return (
-    <div className="min-h-screen bg-white">
-      <header className="flex items-center justify-between p-5 border-b border-border">
+    <div className="min-h-screen ">
+      <header className="flex items-center justify-between p-5 ">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-primary-lighter flex items-center justify-center text-xl">
-            📚
+          <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center">
+            <Library className="w-5 h-5 text-[#111111]" />
           </div>
           <div>
             <h1 className="text-2xl font-extrabold text-text-primary tracking-tight">Dashboard</h1>
@@ -125,9 +132,11 @@ export default function DashboardScreen({ onNavigate }) {
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" size="sm" onClick={() => onNavigate?.(SCREENS.SETTINGS)}>
-            ⚙️ Settings
+            <Settings className="w-4 h-4" />
+            Settings
           </Button>
           <Button variant="destructive" size="sm" onClick={logout}>
+            <LogOut className="w-4 h-4" />
             Sign Out
           </Button>
         </div>
@@ -136,13 +145,14 @@ export default function DashboardScreen({ onNavigate }) {
       <main className="p-4 max-w-4xl mx-auto">
         {error && (
           <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-error-light border border-error mb-4">
-            <span>⚠️</span>
+            <AlertTriangle className="w-4 h-4 text-error shrink-0" />
             <span className="text-error font-medium flex-1">{error}</span>
             <Button variant="secondary" size="sm" onClick={fetchModules}>Retry</Button>
           </div>
         )}
 
         <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
           <Input
             type="text"
             placeholder="Search all flashcards..."
@@ -150,16 +160,14 @@ export default function DashboardScreen({ onNavigate }) {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
           />
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
         </div>
 
         {searchQuery.trim() ? (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                🔍 Search Results
+                <Search className="w-5 h-5" />
+                Search Results
                 <span className="text-sm font-normal text-text-secondary">
                   ({searchResults.length} {searchResults.length === 1 ? 'card' : 'cards'} found)
                 </span>
@@ -173,7 +181,7 @@ export default function DashboardScreen({ onNavigate }) {
                 </div>
               ) : searchResults.length === 0 ? (
                 <div className="py-10 text-center bg-bg-muted rounded-2xl">
-                  <div className="text-4xl mb-3">🔍</div>
+                  <Search className="w-10 h-10 text-text-muted mx-auto mb-3" />
                   <p className="text-lg font-semibold text-text-secondary mb-1">No results found</p>
                   <p className="text-text-muted">Try a different search term</p>
                 </div>
@@ -182,15 +190,15 @@ export default function DashboardScreen({ onNavigate }) {
                   {searchResults.map((card) => (
                     <div
                       key={card.id}
-                      className="p-4 rounded-2xl border border-border bg-white cursor-pointer transition-all hover:border-primary hover:bg-primary-lighter hover:shadow-md"
+                      className="p-4 rounded-2xl  cursor-pointer transition-all hover:border-primary hover:bg-primary-lighter hover:shadow-sm"
                       onClick={() => onNavigate?.(SCREENS.MODULE_DETAIL, card.moduleId)}
                     >
                       <div className="flex items-center gap-2 mb-2">
                         <div
-                          className="w-6 h-6 rounded-lg flex items-center justify-center text-white font-bold text-xs"
+                          className="w-6 h-6 rounded-lg flex items-center justify-center text-xs"
                           style={{ backgroundColor: card.moduleColor }}
                         >
-                          {(card.moduleName || 'M').charAt(0).toUpperCase()}
+                          {(() => { const Icon = ICON_MAP[card.moduleIcon]; return Icon ? <Icon className="w-3.5 h-3.5 text-[#111111]" /> : <span className="text-[#111111] font-bold">{(card.moduleName || 'M').charAt(0).toUpperCase()}</span> })()}
                         </div>
                         <Badge variant="secondary" className="text-xs">{card.moduleName || 'Unknown'}</Badge>
                         <div className="flex-1" />
@@ -220,9 +228,12 @@ export default function DashboardScreen({ onNavigate }) {
         ) : (
           <>
             {modules.length > 0 && (
-              <Card className="mb-4 bg-primary-lighter border-primary">
+              <Card className="mb-4 bg-primary border-0">
                 <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center gap-2">📊 Knowledge Overview</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5" />
+                    Knowledge Overview
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-3 gap-4 mb-4">
@@ -231,11 +242,11 @@ export default function DashboardScreen({ onNavigate }) {
                       <div className="text-sm text-text-secondary font-medium">Total Cards</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-3xl font-extrabold text-primary">{overallAvg}%</div>
+                      <div className="text-3xl font-extrabold text-text-primary">{overallAvg}%</div>
                       <div className="text-sm text-text-secondary font-medium">Avg Score</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-3xl font-extrabold text-primary">{modules.length}</div>
+                      <div className="text-3xl font-extrabold text-text-primary">{modules.length}</div>
                       <div className="text-sm text-text-secondary font-medium">Modules</div>
                     </div>
                   </div>
@@ -252,8 +263,14 @@ export default function DashboardScreen({ onNavigate }) {
 
             <Card className="mb-4">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2">📁 My Modules</CardTitle>
-                <Button onClick={() => onNavigate?.(SCREENS.UPLOAD_IMAGE)}>+ Upload Image</Button>
+                <CardTitle className="flex items-center gap-2">
+                  <Folder className="w-5 h-5" />
+                  My Modules
+                </CardTitle>
+                <Button onClick={() => onNavigate?.(SCREENS.UPLOAD_IMAGE)}>
+                  <Camera className="w-4 h-4" />
+                  Upload Image
+                </Button>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
@@ -263,7 +280,7 @@ export default function DashboardScreen({ onNavigate }) {
                   </div>
                 ) : modules.length === 0 ? (
                   <div className="py-10 text-center bg-bg-muted rounded-2xl">
-                    <div className="text-4xl mb-3">📄</div>
+                    <Folder className="w-10 h-10 text-text-muted mx-auto mb-3" />
                     <p className="text-lg font-semibold text-text-secondary mb-1">No modules yet</p>
                     <p className="text-text-muted">Upload an image to create your first module</p>
                   </div>
@@ -279,22 +296,28 @@ export default function DashboardScreen({ onNavigate }) {
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">⚡ Quick Actions</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="w-5 h-5" />
+                  Quick Actions
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex gap-3 flex-wrap">
                   {modules.length > 0 ? (
                     <>
                       <Button className="flex-1 min-w-[150px]" onClick={() => onNavigate?.(SCREENS.VOICE_QUIZ, modules[0].id)}>
-                        🎤 Start Voice Quiz
+                        <Mic className="w-4 h-4" />
+                        Start Voice Quiz
                       </Button>
                       <Button className="flex-1 min-w-[150px]" onClick={() => onNavigate?.(SCREENS.UPLOAD_IMAGE)}>
-                        📷 Upload Image
+                        <Camera className="w-4 h-4" />
+                        Upload Image
                       </Button>
                     </>
                   ) : (
                     <Button className="flex-1" onClick={() => onNavigate?.(SCREENS.UPLOAD_IMAGE)}>
-                      🚀 Upload Your First Image
+                      <Rocket className="w-4 h-4" />
+                      Upload Your First Image
                     </Button>
                   )}
                 </div>

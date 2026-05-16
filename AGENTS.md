@@ -4,7 +4,7 @@
 
 All product requirements, system design, and implementation tasks live in `.kiro/specs/`:
 
-- **AI Flashcard Quizzer**: `.kiro/specs/ai-flashcard-quizzer/` — original flashcard system
+- **Mirai Flashcards**: `.kiro/specs/ai-flashcard-quizzer/` — original flashcard system
 - **Gemini Voice Agent**: `.kiro/specs/gemini-voice-agent/` — Gemini Live API voice provider
 
 Each spec has `requirements.md`, `design.md`, and `tasks.md`.
@@ -135,15 +135,15 @@ speech-token API → VoiceProviderService → env var (VOICE_PROVIDER_DEFAULT)
 <Textarea placeholder="Multi-line..." rows={3} />
 ```
 
-### Tailwind CSS Theme
+### Tailwind CSS Theme (Kakao)
 Custom colors available:
-- `primary` / `primary-hover` / `primary-active` / `primary-lighter` / `primary-light`
+- `primary` (#FEE500) / `primary-hover` (#FFE81F) / `primary-active` (#E6CF00) / `primary-lighter` (#FFFAE6) / `primary-light` (#FFF3CD)
 - `success` / `success-light`
 - `warning` / `warning-light`
 - `error` / `error-light`
-- `text-primary` / `text-secondary` / `text-muted`
-- `bg` / `bg-hover` / `bg-muted`
-- `border` / `border-hover`
+- `text-primary` (#1A1A1A) / `text-secondary` (#666666) / `text-muted` (#999999)
+- `bg` / `bg-hover` (#FAFAFA) / `bg-muted` (#F5F5F5)
+- `border` (#EEEEEE) / `border-hover` (#DDDDDD)
 
 ### Environment Variables
 Backend `.env.local`:

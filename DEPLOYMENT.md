@@ -2,7 +2,7 @@
 
 ## Overview
 
-This runbook covers deploying the AI Flashcard Quizzer to Vercel (backend) and Vercel Static (frontend).
+This runbook covers deploying the Mirai Flashcards to Vercel (backend) and Vercel Static (frontend).
 
 ---
 

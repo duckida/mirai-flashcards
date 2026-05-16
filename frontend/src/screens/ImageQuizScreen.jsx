@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import { Input } from '@/components/ui/input'
+import { FileText, AlertTriangle, CheckCircle, XCircle, Loader, ArrowLeft } from 'lucide-react'
 import { apiClient } from '@/services/apiClient'
 import { moduleService } from '@/services/moduleService'
 import QuizResultsScreen from './QuizResultsScreen'
@@ -75,7 +76,9 @@ export default function ImageQuizScreen({ moduleId, flashcard, onBack }) {
       <div className="min-h-screen flex items-center justify-center bg-white p-4">
         <Card className="max-w-md w-full">
           <CardContent className="pt-8 pb-8 text-center">
-            <div className="w-16 h-16 rounded-full bg-error-light flex items-center justify-center mx-auto mb-4 text-3xl">⚠️</div>
+            <div className="w-16 h-16 rounded-full bg-error-light flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-8 h-8 text-error" />
+            </div>
             <h3 className="text-xl font-bold text-error mb-2">Error</h3>
             <p className="text-text-secondary mb-4 break-words">{error}</p>
             <Button className="w-full" onClick={onBack}>Return</Button>
@@ -87,15 +90,20 @@ export default function ImageQuizScreen({ moduleId, flashcard, onBack }) {
 
   return (
     <div className="min-h-screen bg-white flex flex-col overflow-x-hidden">
-      <header className="flex items-center justify-between p-5 border-b border-border">
+      <header className="flex items-center justify-between p-5 ">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-primary-lighter flex items-center justify-center text-xl">📝</div>
+          <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center">
+            <FileText className="w-5 h-5 text-[#111111]" />
+          </div>
           <div>
             <h1 className="text-xl font-bold text-text-primary">Text Quiz</h1>
             <p className="text-sm text-text-secondary">{module?.name || 'Module'}</p>
           </div>
         </div>
-        <Button variant="secondary" size="sm" onClick={onBack}>← Back</Button>
+        <Button variant="secondary" size="sm" onClick={onBack}>
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </Button>
       </header>
 
       <main className="flex-1 p-4 max-w-2xl mx-auto w-full">
@@ -107,10 +115,10 @@ export default function ImageQuizScreen({ moduleId, flashcard, onBack }) {
               <Badge variant="default">Text Quiz</Badge>
             )}
 
-            <div className="p-4 bg-primary-lighter rounded-xl">
+            <div className="p-4 bg-primary rounded-xl">
               <div className="flex items-center gap-1.5 mb-2">
-                <div className="w-5 h-5 rounded-md bg-primary flex items-center justify-center text-white font-bold text-xs">Q</div>
-                <span className="text-xs text-primary font-semibold uppercase tracking-wide">Question</span>
+                <div className="w-5 h-5 rounded-md bg-primary flex items-center justify-center text-[#111111] font-bold text-xs">Q</div>
+                <span className="text-xs text-text-primary font-semibold uppercase tracking-wide">Question</span>
               </div>
               <p className="text-lg font-bold text-text-primary break-words">{flashcard?.question || 'Loading...'}</p>
             </div>
@@ -128,7 +136,11 @@ export default function ImageQuizScreen({ moduleId, flashcard, onBack }) {
               <>
                 <div className={`p-4 rounded-xl ${feedback?.isCorrect ? 'bg-success-light border-2 border-success' : 'bg-error-light border-2 border-error'}`}>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-2xl">{feedback?.isCorrect ? '✅' : '❌'}</span>
+                    {feedback?.isCorrect ? (
+                      <CheckCircle className="w-6 h-6 text-success" />
+                    ) : (
+                      <XCircle className="w-6 h-6 text-error" />
+                    )}
                     <span className={`font-bold text-lg ${feedback?.isCorrect ? 'text-success' : 'text-error'}`}>
                       {feedback?.isCorrect ? 'Correct!' : 'Incorrect'}
                     </span>
@@ -159,11 +171,11 @@ export default function ImageQuizScreen({ moduleId, flashcard, onBack }) {
             disabled={!userAnswer.trim() || isLoading} 
             onClick={handleSubmit}
           >
-            {isLoading ? '⏳ Checking...' : '✓ Check Answer'}
+            {isLoading ? <><Loader className="w-4 h-4 animate-spin" /> Checking...</> : <><CheckCircle className="w-4 h-4" /> Check Answer</>}
           </Button>
         ) : (
           <Button className="w-full" size="lg" onClick={handleNext}>
-            → Done
+            Done
           </Button>
         )}
       </div>
