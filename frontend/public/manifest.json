@@ -4,8 +4,8 @@
   "description": "AI-powered flashcard learning app that digitizes physical notes and provides interactive quiz experiences",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#6366f1",
+  "background_color": "#FFFFFF",
+  "theme_color": "#FEE500",
   "orientation": "any",
   "categories": ["education", "productivity"],
   "icons": [
