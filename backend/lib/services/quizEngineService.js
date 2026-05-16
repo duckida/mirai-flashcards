@@ -10,7 +10,7 @@ import { getFirestore } from '../firebase/admin.js';
 import { generateObject, generateText } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { z } from 'zod';
-import { updateFlashcardScore } from './scoringService.js';
+import { calculateScoreDelta, applyScoreDelta } from './scoringService.js';
 import { generateQuizImage } from './imageService.js';
 
 const db = getFirestore();
@@ -905,7 +905,24 @@ export async function evaluateResponse(sessionId, questionId, userAnswer) {
         ? "Correct! That is exactly right."
         : `Not quite. The correct answer is: "${question.correctAnswer}"`;
 
-      const scoreResult = await updateFlashcardScore(flashcardId, isCorrect, confidence);
+      // Read flashcard for current score, then batch both updates
+      const flashcardDoc = await db.collection('flashcards').doc(flashcardId).get();
+      const flashcardData = flashcardDoc.data() || {};
+      const currentScore = flashcardData.knowledgeScore || 0;
+
+      const delta = calculateScoreDelta(confidence, isCorrect);
+      const { newScore, appliedDelta } = applyScoreDelta(currentScore, delta);
+
+      const batch = db.batch();
+
+      batch.update(db.collection('flashcards').doc(flashcardId), {
+        knowledgeScore: newScore,
+        reviewCount: (flashcardData.reviewCount || 0) + 1,
+        correctCount: isCorrect ? (flashcardData.correctCount || 0) + 1 : (flashcardData.correctCount || 0),
+        incorrectCount: isCorrect ? (flashcardData.incorrectCount || 0) : (flashcardData.incorrectCount || 0) + 1,
+        lastReviewedAt: new Date(),
+        updatedAt: new Date(),
+      });
 
       const response = {
         flashcardId,
@@ -914,7 +931,7 @@ export async function evaluateResponse(sessionId, questionId, userAnswer) {
         userAnswer,
         correctAnswer: correctAnswerText,
         isCorrect,
-        scoreChange: scoreResult.scoreDelta,
+        scoreChange: appliedDelta,
         confidence,
         timestamp: new Date(),
       };
@@ -923,7 +940,7 @@ export async function evaluateResponse(sessionId, questionId, userAnswer) {
         responses: [...(session.responses || []), response],
         scoreChanges: {
           ...session.scoreChanges,
-          [flashcardId]: scoreResult.newScore,
+          [flashcardId]: newScore,
         },
       };
 
@@ -933,12 +950,14 @@ export async function evaluateResponse(sessionId, questionId, userAnswer) {
         updates.totalIncorrect = (session.totalIncorrect || 0) + 1;
       }
 
-      await db.collection('quiz_sessions').doc(sessionId).update(updates);
+      batch.update(db.collection('quiz_sessions').doc(sessionId), updates);
+
+      await batch.commit();
 
       return {
         isCorrect,
-        scoreChange: scoreResult.scoreDelta,
-        newScore: scoreResult.newScore,
+        scoreChange: appliedDelta,
+        newScore,
         feedback: feedbackText,
         correctAnswer: correctAnswerText,
       };
@@ -966,7 +985,8 @@ export async function evaluateResponse(sessionId, questionId, userAnswer) {
   correctAnswerText = flashcard.content?.substring(0, 200) || '';
   feedbackText = generateFeedback(isCorrect, correctAnswerText, userAnswer, confidence);
 
-  const scoreResult = await updateFlashcardScore(flashcardId, isCorrect, confidence);
+  const delta = calculateScoreDelta(confidence, isCorrect);
+  const { newScore, appliedDelta } = applyScoreDelta(flashcard.knowledgeScore || 0, delta);
 
   const response = {
     flashcardId,
@@ -975,16 +995,27 @@ export async function evaluateResponse(sessionId, questionId, userAnswer) {
     userAnswer,
     correctAnswer: correctAnswerText,
     isCorrect,
-    scoreChange: scoreResult.scoreDelta,
+    scoreChange: appliedDelta,
     confidence,
     timestamp: new Date(),
   };
 
+  const batch = db.batch();
+
+  batch.update(db.collection('flashcards').doc(flashcardId), {
+    knowledgeScore: newScore,
+    reviewCount: (flashcard.reviewCount || 0) + 1,
+    correctCount: isCorrect ? (flashcard.correctCount || 0) + 1 : (flashcard.correctCount || 0),
+    incorrectCount: isCorrect ? (flashcard.incorrectCount || 0) : (flashcard.incorrectCount || 0) + 1,
+    lastReviewedAt: new Date(),
+    updatedAt: new Date(),
+  });
+
   const updates = {
-    responses: [...(session.responses || []), response],
+    responses: admin.firestore.FieldValue.arrayUnion(response),
     scoreChanges: {
       ...session.scoreChanges,
-      [flashcardId]: scoreResult.newScore,
+      [flashcardId]: newScore,
     },
   };
 
@@ -994,12 +1025,14 @@ export async function evaluateResponse(sessionId, questionId, userAnswer) {
     updates.totalIncorrect = (session.totalIncorrect || 0) + 1;
   }
 
-  await db.collection('quiz_sessions').doc(sessionId).update(updates);
+  batch.update(db.collection('quiz_sessions').doc(sessionId), updates);
+
+  await batch.commit();
 
   return {
     isCorrect,
-    scoreChange: scoreResult.scoreDelta,
-    newScore: scoreResult.newScore,
+    scoreChange: appliedDelta,
+    newScore,
     feedback: feedbackText,
     correctAnswer: correctAnswerText,
   };
