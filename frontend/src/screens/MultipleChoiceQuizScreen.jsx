@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Spinner } from '@/components/ui/spinner';
 import { Badge } from '@/components/ui/badge';
-import { Loader, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
+import { CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
 import useAuth from '@/hooks/useAuth';
 import { quizService } from '@/services/quizService';
 
@@ -297,7 +297,7 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
               onClick={handleSubmitAnswer}
               disabled={!selectedOption || isSubmitting}
             >
-              {isSubmitting ? <Loader className="w-4 h-4 animate-spin mr-2" /> : null}
+              {isSubmitting ? <Spinner size="sm" className="mr-2" /> : null}
               {isSubmitting ? 'Checking...' : 'Check Answer'}
             </Button>
           ) : (
@@ -307,7 +307,7 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
               onClick={handleNextQuestion}
               disabled={isSubmitting}
             >
-              {isSubmitting ? <Loader className="w-4 h-4 animate-spin mr-2" /> : null}
+              {isSubmitting ? <Spinner size="sm" className="mr-2" /> : null}
               {isSubmitting ? 'Finishing...' : (isLastQuestion ? 'Results' : 'Next')}
             </Button>
           )}

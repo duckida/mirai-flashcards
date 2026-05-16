@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Spinner } from '@/components/ui/spinner'
 import { Input } from '@/components/ui/input'
-import { Search, BarChart3, FileText, Mic, ArrowLeft, Trash2, Palette, Crop, RotateCw, CheckCircle, X, Loader } from 'lucide-react'
+import { Search, BarChart3, FileText, Mic, ArrowLeft, Trash2, Palette, Crop, RotateCw, CheckCircle, X } from 'lucide-react'
 import ModuleCustomizeSheet, { ICON_MAP } from '@/components/ModuleCustomizeSheet'
 import { getCroppedImage } from '@/services/imageCrop'
 
@@ -145,7 +145,7 @@ function FlashcardCard({ flashcard, onVoiceQuiz, onTextQuiz, onDelete, isDeletin
               />
             </div>
             <Button className="w-full" size="lg" onClick={handleApplyCrop} disabled={isSaving}>
-              {isSaving ? <><Loader className="w-4 h-4 animate-spin" /> Saving...</> : <><Crop className="w-4 h-4" /> Apply Crop</>}
+              {isSaving ? <><Spinner size="sm" /> Saving...</> : <><Crop className="w-4 h-4" /> Apply Crop</>}
             </Button>
           </div>
         </div>

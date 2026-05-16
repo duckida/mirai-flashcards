@@ -1,7 +1,7 @@
 import { useState, useCallback, Suspense, lazy } from 'react'
-import { Loader } from 'lucide-react'
 import { CivicAuthProvider, useUser } from '@civic/auth/react'
 import AuthScreen from './screens/AuthScreen'
+import { Spinner } from '@/components/ui/spinner'
 
 const DashboardScreen = lazy(() => import('./screens/DashboardScreen'))
 const UploadImageScreen = lazy(() => import('./screens/UploadImageScreen'))
@@ -26,7 +26,7 @@ const SCREENS = {
 function ScreenFallback() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">
-      <Loader className="w-6 h-6 animate-spin text-text-muted" />
+      <Spinner size="sm" />
     </div>
   )
 }
@@ -64,7 +64,7 @@ function AppContent() {
   if (isLoading && !user) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white gap-4">
-        <Loader className="w-8 h-8 animate-spin text-text-muted" />
+        <Spinner size="md" />
         <p className="text-text-secondary">Loading...</p>
       </div>
     )

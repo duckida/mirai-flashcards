@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import { Input } from '@/components/ui/input'
-import { FileText, AlertTriangle, CheckCircle, XCircle, Loader, ArrowLeft } from 'lucide-react'
+import { FileText, AlertTriangle, CheckCircle, XCircle, ArrowLeft } from 'lucide-react'
 import { apiClient } from '@/services/apiClient'
 import { moduleService } from '@/services/moduleService'
 import QuizResultsScreen from './QuizResultsScreen'
@@ -171,7 +171,7 @@ export default function ImageQuizScreen({ moduleId, flashcard, onBack }) {
             disabled={!userAnswer.trim() || isLoading} 
             onClick={handleSubmit}
           >
-            {isLoading ? <><Loader className="w-4 h-4 animate-spin" /> Checking...</> : <><CheckCircle className="w-4 h-4" /> Check Answer</>}
+            {isLoading ? <><Spinner size="sm" /> Checking...</> : <><CheckCircle className="w-4 h-4" /> Check Answer</>}
           </Button>
         ) : (
           <Button className="w-full" size="lg" onClick={handleNext}>

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import { Progress } from '@/components/ui/progress'
-import { Mic, Volume2, AlertTriangle, Info, CheckCircle, Loader, MicOff, ThumbsUp, ThumbsDown, ArrowLeft } from 'lucide-react'
+import { Mic, Volume2, AlertTriangle, Info, CheckCircle, MicOff, ThumbsUp, ThumbsDown, ArrowLeft } from 'lucide-react'
 import { voiceService } from '@/services/voiceService'
 import { quizService } from '@/services/quizService'
 
@@ -282,7 +282,7 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
                   <><Mic className="w-5 h-5" /> Listening...</>
                 )
               ) : status === STATUS.CONNECTING ? (
-                <><Loader className="w-5 h-5 animate-spin" /> Connecting...</>
+                <><Spinner size="sm" /> Connecting...</>
               ) : status === STATUS.ENDED ? (
                 <><CheckCircle className="w-5 h-5" /> Session Ended</>
               ) : (
