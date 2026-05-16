@@ -96,8 +96,8 @@ function FlashcardCard({ flashcard, onVoiceQuiz, onTextQuiz, onDelete, isDeletin
               onClick={() => onTextQuiz?.(flashcard)}
             >
               <FileText className="w-4 h-4 shrink-0" />
-              <span className="hidden sm:inline">Text</span>
-              <span className="sm:hidden">Read</span>
+              <span className="hidden sm:inline">Text Quiz</span>
+              <span className="sm:hidden">Text Quiz</span>
             </Button>
             <Button 
               variant="destructive" 

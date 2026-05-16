@@ -129,21 +129,39 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-white gap-6 p-6">
-        {flashcard?.sourceImageUrl && (
-          <div className="w-full max-w-sm rounded-xl overflow-hidden shadow-lg bg-white">
-            <img 
-              src={flashcard.sourceImageUrl} 
-              alt="Flashcard" 
-              className="w-full h-auto"
-            />
+      <div className="min-h-screen bg-white p-4 md:p-6">
+        <div className="max-w-2xl mx-auto flex min-h-[calc(100vh-2rem)] flex-col justify-center gap-4 md:gap-6">
+          <div className="text-center space-y-2">
+            <Spinner size="lg" />
+            <p className="text-text-primary font-medium">Generating text quiz questions...</p>
+            <div className="w-full max-w-xs mx-auto space-y-2">
+              <Progress value={generationProgress} indicatorClassName="bg-primary" className="h-3" />
+              <p className="text-xs text-text-muted">{Math.round(generationProgress)}%</p>
+            </div>
           </div>
-        )}
-        <Spinner size="lg" />
-        <div className="w-full max-w-xs space-y-2 text-center">
-          <p className="text-text-primary font-medium">Generating questions...</p>
-          <Progress value={generationProgress} indicatorClassName="bg-primary" className="h-3" />
-          <p className="text-xs text-text-muted">{Math.round(generationProgress)}%</p>
+
+          <Card className="shadow-sm overflow-hidden">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Flashcard</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {flashcard?.sourceImageUrl && (
+                <div className="rounded-xl overflow-hidden bg-bg-muted">
+                  <img
+                    src={flashcard.sourceImageUrl}
+                    alt="Flashcard"
+                    className="w-full h-auto"
+                  />
+                </div>
+              )}
+
+              {flashcard?.content && (
+                <div className="rounded-xl bg-bg-muted p-4 text-sm text-text-primary whitespace-pre-wrap break-words">
+                  {flashcard.content}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
