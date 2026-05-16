@@ -194,16 +194,16 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
   return (
     <div className="min-h-screen bg-white overflow-x-hidden">
       <header className="flex items-center justify-between p-5 ">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center shrink-0">
             <Mic className="w-5 h-5 text-[#111111]" />
           </div>
-          <div>
-            <h1 className="text-2xl font-extrabold text-text-primary tracking-tight">Voice Quiz</h1>
-            <p className="text-sm text-text-secondary">{moduleName || 'Voice Practice'}</p>
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-2xl font-extrabold text-text-primary tracking-tight truncate">Voice Quiz</h1>
+            <p className="text-sm text-text-secondary truncate">{moduleName || 'Voice Practice'}</p>
           </div>
         </div>
-        <Button variant="secondary" size="sm" onClick={onBack}>
+        <Button variant="secondary" size="sm" onClick={onBack} className="shrink-0">
           <ArrowLeft className="w-4 h-4" />
           Back
         </Button>
@@ -247,17 +247,17 @@ export default function VoiceQuizScreen({ moduleId, flashcard, moduleName, onBac
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="grid grid-cols-3 gap-2 md:gap-4 text-center">
                 <div>
-                  <div className="text-2xl font-bold text-text-primary">{summary.totalQuestions}</div>
+                  <div className="text-xl md:text-2xl font-bold text-text-primary">{summary.totalQuestions}</div>
                   <div className="text-xs text-text-secondary">Questions</div>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-success">{summary.correct}</div>
+                  <div className="text-xl md:text-2xl font-bold text-success">{summary.correct}</div>
                   <div className="text-xs text-text-secondary">Correct</div>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-error">{summary.incorrect}</div>
+                  <div className="text-xl md:text-2xl font-bold text-error">{summary.incorrect}</div>
                   <div className="text-xs text-text-secondary">Incorrect</div>
                 </div>
               </div>

@@ -160,18 +160,18 @@ export default function UploadImageScreen({ onBack, onSuccess }) {
   return (
     <div className="min-h-screen bg-white">
       <header className="flex items-center justify-between p-5 ">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center shrink-0">
             <Camera className="w-5 h-5 text-[#111111]" />
           </div>
-          <div>
-            <h1 className="text-2xl font-extrabold text-text-primary">Upload Image</h1>
-            <p className="text-sm text-text-secondary">Scan your notes into flashcards</p>
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-2xl font-extrabold text-text-primary truncate">Upload Image</h1>
+            <p className="text-sm text-text-secondary truncate">Scan your notes into flashcards</p>
           </div>
         </div>
-        <Button variant="secondary" size="sm" onClick={onBack}>
+        <Button variant="secondary" size="sm" onClick={onBack} className="shrink-0">
           <ArrowLeft className="w-4 h-4" />
-          Back
+          <span className="hidden sm:inline">Back</span>
         </Button>
       </header>
 
@@ -186,7 +186,7 @@ export default function UploadImageScreen({ onBack, onSuccess }) {
 
         {state === STATES.CROPPING && previewUrl && (
           <div className="mb-4">
-            <div className="relative w-full h-[400px] rounded-2xl overflow-hidden bg-[#111]">
+            <div className="relative w-full h-[300px] md:h-[400px] rounded-2xl overflow-hidden bg-[#111]">
               <Cropper
                 image={previewUrl}
                 crop={crop}
@@ -245,7 +245,7 @@ export default function UploadImageScreen({ onBack, onSuccess }) {
         {(state === STATES.IDLE || state === STATES.ERROR) && (
           <div>
             <div
-              className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all ${
+              className={`border-2 border-dashed rounded-2xl p-6 md:p-12 text-center cursor-pointer transition-all ${
                 isDragging ? 'border-primary bg-[#F8F8F8]' : 'border-border bg-bg-muted hover:border-primary hover:bg-[#F8F8F8]'
               }`}
               onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFileSelect(e.dataTransfer?.files?.[0]) }}
@@ -255,9 +255,9 @@ export default function UploadImageScreen({ onBack, onSuccess }) {
             >
               <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => handleFileSelect(e.target.files?.[0])} className="hidden" />
               {previewUrl ? (
-                <div>
+                <div className="w-full">
                   <img src={previewUrl} alt="Preview" className="max-w-full max-h-56 rounded-xl mb-3 mx-auto" />
-                  <p className="text-sm text-text-secondary">{selectedFile?.name} ({(selectedFile?.size / 1024 / 1024).toFixed(2)} MB)</p>
+                  <p className="text-sm text-text-secondary truncate max-w-full">{selectedFile?.name} ({(selectedFile?.size / 1024 / 1024).toFixed(2)} MB)</p>
                 </div>
               ) : (
                 <>

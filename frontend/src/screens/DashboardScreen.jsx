@@ -121,23 +121,23 @@ export default function DashboardScreen({ onNavigate }) {
   return (
     <div className="min-h-screen ">
       <header className="flex items-center justify-between p-5 ">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center shrink-0">
             <Library className="w-5 h-5 text-[#111111]" />
           </div>
-          <div>
-            <h1 className="text-2xl font-extrabold text-text-primary tracking-tight">Dashboard</h1>
-            <p className="text-sm text-text-secondary">Welcome back, {user?.name || 'User'}</p>
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-2xl font-extrabold text-text-primary tracking-tight truncate">Dashboard</h1>
+            <p className="text-sm text-text-secondary truncate">Welcome back, {user?.name || 'User'}</p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" size="sm" onClick={() => onNavigate?.(SCREENS.SETTINGS)}>
+        <div className="flex gap-2 shrink-0">
+          <Button variant="secondary" size="sm" onClick={() => onNavigate?.(SCREENS.SETTINGS)} className="px-2 md:px-3">
             <Settings className="w-4 h-4" />
-            Settings
+            <span className="hidden sm:inline ml-1">Settings</span>
           </Button>
-          <Button variant="destructive" size="sm" onClick={logout}>
+          <Button variant="destructive" size="sm" onClick={logout} className="px-2 md:px-3">
             <LogOut className="w-4 h-4" />
-            Sign Out
+            <span className="hidden sm:inline ml-1">Sign Out</span>
           </Button>
         </div>
       </header>
@@ -236,18 +236,18 @@ export default function DashboardScreen({ onNavigate }) {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div className="grid grid-cols-3 gap-2 md:gap-4 mb-4">
                     <div className="text-center">
-                      <div className="text-3xl font-extrabold text-text-primary">{totalCards}</div>
-                      <div className="text-sm text-text-secondary font-medium">Total Cards</div>
+                      <div className="text-2xl md:text-3xl font-extrabold text-text-primary">{totalCards}</div>
+                      <div className="text-xs md:text-sm text-text-secondary font-medium">Total Cards</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-3xl font-extrabold text-text-primary">{overallAvg}%</div>
-                      <div className="text-sm text-text-secondary font-medium">Avg Score</div>
+                      <div className="text-2xl md:text-3xl font-extrabold text-text-primary">{overallAvg}%</div>
+                      <div className="text-xs md:text-sm text-text-secondary font-medium">Avg Score</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-3xl font-extrabold text-text-primary">{modules.length}</div>
-                      <div className="text-sm text-text-secondary font-medium">Modules</div>
+                      <div className="text-2xl md:text-3xl font-extrabold text-text-primary">{modules.length}</div>
+                      <div className="text-xs md:text-sm text-text-secondary font-medium">Modules</div>
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -305,11 +305,11 @@ export default function DashboardScreen({ onNavigate }) {
                 <div className="flex gap-3 flex-wrap">
                   {modules.length > 0 ? (
                     <>
-                      <Button className="flex-1 min-w-[150px]" onClick={() => onNavigate?.(SCREENS.VOICE_QUIZ, modules[0].id)}>
+                      <Button className="flex-1 min-w-[130px] md:min-w-[150px]" onClick={() => onNavigate?.(SCREENS.VOICE_QUIZ, modules[0].id)}>
                         <Mic className="w-4 h-4" />
-                        Start Voice Quiz
+                        Voice Quiz
                       </Button>
-                      <Button className="flex-1 min-w-[150px]" onClick={() => onNavigate?.(SCREENS.UPLOAD_IMAGE)}>
+                      <Button className="flex-1 min-w-[130px] md:min-w-[150px]" onClick={() => onNavigate?.(SCREENS.UPLOAD_IMAGE)}>
                         <Camera className="w-4 h-4" />
                         Upload Image
                       </Button>

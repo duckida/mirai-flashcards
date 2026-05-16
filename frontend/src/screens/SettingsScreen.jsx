@@ -29,16 +29,16 @@ export default function SettingsScreen({ onBack }) {
   return (
     <div className="min-h-screen bg-white">
       <header className="flex items-center justify-between p-5 ">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center shrink-0">
             <Settings className="w-5 h-5 text-[#111111]" />
           </div>
-          <div>
-            <h1 className="text-2xl font-extrabold text-text-primary">Settings</h1>
-            <p className="text-sm text-text-secondary">Manage your account</p>
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-2xl font-extrabold text-text-primary truncate">Settings</h1>
+            <p className="text-sm text-text-secondary truncate">Manage your account</p>
           </div>
         </div>
-        <Button variant="secondary" size="sm" onClick={onBack}>
+        <Button variant="secondary" size="sm" onClick={onBack} className="shrink-0">
           <ArrowLeft className="w-4 h-4" />
           Back
         </Button>

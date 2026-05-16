@@ -16,6 +16,7 @@
     "db:backup": "node scripts/backup.js"
   },
   "dependencies": {
+    "@ai-sdk/google": "^3.0.75",
     "@ai-sdk/openai": "^3.0.47",
     "@civic/auth": "^0.15.1",
     "@google/genai": "^1.46.0",

@@ -61,7 +61,7 @@ function FlashcardCard({ flashcard, onVoiceQuiz, onTextQuiz, onDelete, isDeletin
               />
               <button
                 onClick={() => setShowCrop(true)}
-                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-white"
+                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center md:opacity-0 md:group-hover:opacity-100 transition-opacity shadow-sm hover:bg-white"
               >
                 <Crop className="w-4 h-4 text-[#111]" />
               </button>
@@ -82,26 +82,29 @@ function FlashcardCard({ flashcard, onVoiceQuiz, onTextQuiz, onDelete, isDeletin
             <Button 
               variant="outline" 
               size="sm" 
-              className="flex-1"
+              className="flex-1 px-2 md:px-3"
               onClick={() => onVoiceQuiz?.(flashcard)}
             >
-              <Mic className="w-4 h-4" />
-              Voice Quiz
+              <Mic className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline">Voice</span>
+              <span className="sm:hidden">Quiz</span>
             </Button>
             <Button 
               variant="outline" 
               size="sm" 
-              className="flex-1"
+              className="flex-1 px-2 md:px-3"
               onClick={() => onTextQuiz?.(flashcard)}
             >
-              <FileText className="w-4 h-4" />
-              Text Quiz
+              <FileText className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline">Text</span>
+              <span className="sm:hidden">Read</span>
             </Button>
             <Button 
               variant="destructive" 
               size="sm"
               onClick={() => onDelete?.(flashcard)}
               disabled={isDeleting}
+              className="px-2 md:px-3"
             >
               {isDeleting ? 'Deleting...' : <Trash2 className="w-4 h-4" />}
             </Button>
@@ -119,7 +122,7 @@ function FlashcardCard({ flashcard, onVoiceQuiz, onTextQuiz, onDelete, isDeletin
                 Done
               </button>
             </div>
-            <div className="relative w-full h-[320px] rounded-2xl overflow-hidden bg-[#111] mb-4">
+            <div className="relative w-full h-[250px] md:h-[320px] rounded-2xl overflow-hidden bg-[#111] mb-4">
               <Cropper
                 image={flashcard.sourceImageUrl}
                 crop={crop}
@@ -256,35 +259,35 @@ export default function ModuleDetailScreen({ moduleId, onBack, onNavigate }) {
   return (
     <div className="min-h-screen bg-white">
       <header className="flex items-center justify-between p-5 ">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           <div
-            className="w-12 h-12 rounded-2xl flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
+            className="w-10 md:w-12 h-10 md:h-12 rounded-2xl flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity shrink-0"
             style={{ backgroundColor: defaultColor }}
             onClick={() => setShowCustomize(true)}
           >
             {ModuleAvatar ? (
-              <ModuleAvatar className="w-6 h-6 text-[#111111]" />
+              <ModuleAvatar className="w-5 md:w-6 h-5 md:h-6 text-[#111111]" />
             ) : (
-              <span className="text-[#111111] font-extrabold text-xl">
+              <span className="text-[#111111] font-extrabold text-lg md:text-xl">
                 {(module?.name || 'M').charAt(0).toUpperCase()}
               </span>
             )}
           </div>
-          <div>
-            <h1 className="text-2xl font-extrabold text-text-primary">{module?.name || 'Module'}</h1>
-            <p className="text-sm text-text-secondary">
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-2xl font-extrabold text-text-primary truncate">{module?.name || 'Module'}</h1>
+            <p className="text-sm text-text-secondary truncate">
               {flashcards.length} card{flashcards.length !== 1 ? 's' : ''} &middot; Score: {aggregateScore}%
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" size="sm" onClick={() => setShowCustomize(true)}>
+        <div className="flex gap-2 shrink-0">
+          <Button variant="secondary" size="sm" onClick={() => setShowCustomize(true)} className="px-2 md:px-3">
             <Palette className="w-4 h-4" />
-            Customize
+            <span className="hidden sm:inline ml-1">Customize</span>
           </Button>
-          <Button variant="secondary" size="sm" onClick={onBack}>
+          <Button variant="secondary" size="sm" onClick={onBack} className="px-2 md:px-3">
             <ArrowLeft className="w-4 h-4" />
-            Back
+            <span className="hidden sm:inline ml-1">Back</span>
           </Button>
         </div>
       </header>

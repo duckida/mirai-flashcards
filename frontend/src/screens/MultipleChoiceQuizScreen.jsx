@@ -183,13 +183,13 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
   return (
     <div className="min-h-screen bg-white flex flex-col overflow-x-hidden">
       <header className="sticky top-0 z-10 flex items-center justify-between p-4  bg-bg-muted">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl font-bold text-text-primary">Text Quiz</h1>
-          <Badge variant="secondary">{currentQuestionIndex + 1} / {questions.length}</Badge>
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <h1 className="text-lg md:text-xl font-bold text-text-primary truncate">Text Quiz</h1>
+          <Badge variant="secondary" className="shrink-0">{currentQuestionIndex + 1} / {questions.length}</Badge>
         </div>
-        <Button variant="outline" size="sm" onClick={onBack} disabled={isSubmitting}>
+        <Button variant="outline" size="sm" onClick={onBack} disabled={isSubmitting} className="shrink-0">
           <ArrowLeft className="w-4 h-4" />
-          Cancel
+          <span className="hidden sm:inline">Cancel</span>
         </Button>
       </header>
 
@@ -213,7 +213,7 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
             <CardContent className="flex flex-col gap-3 break-words">
               {q.options?.map((option, oIdx) => {
                 let btnVariant = "outline";
-                let btnClass = "justify-start h-auto py-4 px-4 text-left font-normal border-2 transition-all whitespace-normal break-words";
+                let btnClass = "justify-start h-auto py-3 md:py-4 px-3 md:px-4 text-left font-normal border-2 transition-all whitespace-normal break-words text-sm md:text-base";
 
                 if (feedback) {
                   if (option === selectedOption) {
@@ -274,7 +274,7 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
         <div className="p-4 border-t border-border max-w-2xl mx-auto w-full">
           {!feedback ? (
             <Button
-              className="w-full shadow-lg h-14 text-lg"
+              className="w-full shadow-lg h-12 md:h-14 text-base md:text-lg"
               size="lg"
               onClick={handleSubmitAnswer}
               disabled={!selectedOption || isSubmitting}
@@ -284,13 +284,13 @@ export default function MultipleChoiceQuizScreen({ moduleId, moduleName, flashca
             </Button>
           ) : (
             <Button
-              className="w-full shadow-lg h-14 text-lg"
+              className="w-full shadow-lg h-12 md:h-14 text-base md:text-lg"
               size="lg"
               onClick={handleNextQuestion}
               disabled={isSubmitting}
             >
               {isSubmitting ? <Loader className="w-4 h-4 animate-spin mr-2" /> : null}
-              {isSubmitting ? 'Finishing...' : (isLastQuestion ? 'See Results' : 'Next Question')}
+              {isSubmitting ? 'Finishing...' : (isLastQuestion ? 'Results' : 'Next')}
             </Button>
           )}
         </div>

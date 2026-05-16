@@ -91,16 +91,16 @@ export default function ImageQuizScreen({ moduleId, flashcard, onBack }) {
   return (
     <div className="min-h-screen bg-white flex flex-col overflow-x-hidden">
       <header className="flex items-center justify-between p-5 ">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center shrink-0">
             <FileText className="w-5 h-5 text-[#111111]" />
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-text-primary">Text Quiz</h1>
-            <p className="text-sm text-text-secondary">{module?.name || 'Module'}</p>
+          <div className="min-w-0">
+            <h1 className="text-lg md:text-xl font-bold text-text-primary truncate">Text Quiz</h1>
+            <p className="text-sm text-text-secondary truncate">{module?.name || 'Module'}</p>
           </div>
         </div>
-        <Button variant="secondary" size="sm" onClick={onBack}>
+        <Button variant="secondary" size="sm" onClick={onBack} className="shrink-0">
           <ArrowLeft className="w-4 h-4" />
           Back
         </Button>

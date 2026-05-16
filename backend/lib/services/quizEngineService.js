@@ -7,14 +7,16 @@
  */
 
 import { getFirestore } from '../firebase/admin.js';
-import { gateway, generateObject, generateText } from 'ai';
+import { generateObject, generateText } from 'ai';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { z } from 'zod';
 import { updateFlashcardScore } from './scoringService.js';
 import { generateQuizImage } from './imageService.js';
 
 const db = getFirestore();
 
-const AI_MODEL = process.env.CLASSIFICATION_MODEL || 'google/gemini-3-flash';
+const google = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
+const AI_MODEL = 'gemma-4-31b-it';
 
 // ============================================================
 // Exercise type constants
@@ -198,7 +200,8 @@ function shuffleArray(array) {
 async function rephraseQuestionWithAI(flashcard, moduleContext) {
   try {
     const { text } = await generateText({
-      model: gateway(AI_MODEL),
+      model: google(AI_MODEL),
+      providerOptions: { google: { thinkingConfig: { thinkingLevel: "minimal" } } },
       system: `You are a quiz question writer. Rephrase the given flashcard question so it tests the same knowledge but uses different wording or a different angle. Keep it concise (1-2 sentences). Do NOT include the answer in the rephrased question.`,
       prompt: `Original question: "${flashcard.question}"
 Original answer: "${flashcard.answer}"
@@ -482,7 +485,8 @@ async function generateQuestionFromContent(flashcard, type) {
 
   try {
     const { object } = await generateObject({
-      model: gateway(AI_MODEL),
+      model: google(AI_MODEL),
+      providerOptions: { google: { thinkingConfig: { thinkingLevel: "minimal" } } },
       system: `You are a quiz generator. Given raw study material content, generate a quiz question and its correct answer in JSON format.
 
 Rules:
@@ -631,7 +635,8 @@ async function generateMultipleChoiceQuestionsBatch(flashcard, count = 8) {
   
   try {
     const { object } = await generateObject({
-      model: gateway(AI_MODEL),
+      model: google(AI_MODEL),
+      providerOptions: { google: { thinkingConfig: { thinkingLevel: "minimal" } } },
       system: `You are creating a multiple-choice quiz from study material content. Output JSON.
 
 Rules:
@@ -690,7 +695,8 @@ async function generateMultipleChoiceQuestion(flashcard, moduleFlashcards) {
 
   try {
     const { object } = await generateObject({
-      model: gateway(AI_MODEL),
+      model: google(AI_MODEL),
+      providerOptions: { google: { thinkingConfig: { thinkingLevel: "minimal" } } },
       system: `You are creating a multiple-choice quiz question from study material content. Output JSON.
 
 Rules:
@@ -782,7 +788,8 @@ const evaluationSchema = z.object({
 async function evaluateWithAI(content, userAnswer, question) {
   try {
     const { object } = await generateObject({
-      model: gateway(AI_MODEL),
+      model: google(AI_MODEL),
+      providerOptions: { google: { thinkingConfig: { thinkingLevel: "minimal" } } },
       system: `You are an expert quiz evaluator. Evaluate the user's answer against the original study material and return the result as JSON.
 
 Rules:
