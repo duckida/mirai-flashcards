@@ -4,6 +4,10 @@
  */
 
 import { gateway, generateText } from 'ai';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+
+const google = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
+const AI_MODEL = 'gemma-4-31b-it';
 
 /**
  * @typedef {Object} ModuleAssignment
@@ -85,7 +89,8 @@ Answer: "${flashcard.answer}"`
 Content: "${contentText}"`;
 
     const { text } = await generateText({
-      model: gateway(CLASSIFICATION_CONFIG.model),
+      model: google(AI_MODEL),
+      providerOptions: { google: { thinkingConfig: { thinkingLevel: "minimal" } } },
       system: systemPrompt,
       prompt: userPrompt,
     });
