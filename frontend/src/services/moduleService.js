@@ -25,4 +25,8 @@ export const moduleService = {
   async updateModule(moduleId, updates) {
     return apiClient.patch(`/api/modules/${moduleId}`, updates)
   },
+
+  async deleteModule(moduleId) {
+    return apiClient.delete(`/api/modules/${moduleId}`)
+  },
 }

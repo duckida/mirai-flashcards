@@ -6,14 +6,15 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Spinner } from '@/components/ui/spinner'
 import { Input } from '@/components/ui/input'
-import { Search, BarChart3, FileText, Mic, ArrowLeft, Trash2, Palette, Crop, RotateCw, CheckCircle, X } from 'lucide-react'
+import { Search, BarChart3, FileText, Mic, ArrowLeft, Trash2, Palette, Crop, RotateCw, CheckCircle, X, FolderInput } from 'lucide-react'
 import ModuleCustomizeSheet, { ICON_MAP } from '@/components/ModuleCustomizeSheet'
 import { getCroppedImage } from '@/services/imageCrop'
 
+import useAuth from '@/hooks/useAuth'
 import { moduleService } from '@/services/moduleService'
 import { flashcardService } from '@/services/flashcardService'
 
-function FlashcardCard({ flashcard, onVoiceQuiz, onTextQuiz, onDelete, isDeleting, onSaveImage }) {
+function FlashcardCard({ flashcard, onVoiceQuiz, onTextQuiz, onDelete, onMoveClick, isDeleting, onSaveImage }) {
   const score = flashcard.knowledgeScore || 0
   const variant = score >= 70 ? 'success' : score >= 40 ? 'warning' : 'error'
   const color = score >= 70 ? 'bg-success' : score >= 40 ? 'bg-warning' : 'bg-error'
@@ -98,6 +99,16 @@ function FlashcardCard({ flashcard, onVoiceQuiz, onTextQuiz, onDelete, isDeletin
               <FileText className="w-4 h-4 shrink-0" />
               <span>Text</span>
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 px-2 md:px-3"
+              onClick={() => onMoveClick?.(flashcard)}
+              disabled={isDeleting}
+            >
+              <FolderInput className="w-4 h-4 shrink-0" />
+              <span>Move</span>
+            </Button>
             <Button 
               variant="destructive" 
               size="sm"
@@ -155,10 +166,14 @@ function FlashcardCard({ flashcard, onVoiceQuiz, onTextQuiz, onDelete, isDeletin
 }
 
 export default function ModuleDetailScreen({ moduleId, onBack, onNavigate }) {
+  const { user } = useAuth()
   const [module, setModule] = useState(null)
   const [flashcards, setFlashcards] = useState([])
+  const [allModules, setAllModules] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isDeletingModule, setIsDeletingModule] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
+  const [movingCard, setMovingCard] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [showCustomize, setShowCustomize] = useState(false)
 
@@ -179,12 +194,18 @@ export default function ModuleDetailScreen({ moduleId, onBack, onNavigate }) {
         setModule(result.module)
         setFlashcards(result.flashcards || [])
       }
+      if (user?.id) {
+        const modulesResult = await moduleService.getModules(user.id)
+        if (modulesResult.success) {
+          setAllModules(modulesResult.modules || [])
+        }
+      }
     } catch (err) {
       console.error(err)
     } finally {
       setIsLoading(false)
     }
-  }, [moduleId])
+  }, [moduleId, user?.id])
 
   useEffect(() => {
     fetchData()
@@ -223,6 +244,38 @@ export default function ModuleDetailScreen({ moduleId, onBack, onNavigate }) {
     ? Math.round(flashcards.reduce((sum, c) => sum + (c.knowledgeScore || 0), 0) / flashcards.length)
     : 0
   const scoreColor = aggregateScore >= 70 ? 'bg-success' : aggregateScore >= 40 ? 'bg-warning' : 'bg-error'
+
+  const handleDeleteModule = async () => {
+    if (!confirm(`Are you sure you want to delete the module "${module?.name}" and all its flashcards? This action cannot be undone.`)) {
+      return
+    }
+
+    setIsDeletingModule(true)
+    try {
+      await moduleService.deleteModule(moduleId)
+      onBack()
+    } catch (err) {
+      console.error('Failed to delete module:', err)
+      alert('Failed to delete module. Please try again.')
+      setIsDeletingModule(false)
+    }
+  }
+
+  const handleMoveFlashcard = async (targetModuleId) => {
+    if (!movingCard || !targetModuleId || targetModuleId === moduleId) {
+      setMovingCard(null)
+      return
+    }
+
+    try {
+      await flashcardService.updateFlashcard(movingCard.id, { moduleId: targetModuleId })
+      setMovingCard(null)
+      await fetchData()
+    } catch (err) {
+      console.error('Failed to move flashcard:', err)
+      alert('Failed to move flashcard. Please try again.')
+    }
+  }
 
   const handleDeleteFlashcard = async (flashcard) => {
     if (!confirm(`Are you sure you want to delete this flashcard? This action cannot be undone.`)) {
@@ -280,6 +333,9 @@ export default function ModuleDetailScreen({ moduleId, onBack, onNavigate }) {
           </div>
         </div>
         <div className="flex gap-2 shrink-0">
+          <Button variant="outline" size="sm" onClick={handleDeleteModule} disabled={isDeletingModule} className="px-2 md:px-3 text-error border-error-light hover:bg-error-light">
+            <Trash2 className="w-4 h-4" />
+          </Button>
           <Button variant="secondary" size="sm" onClick={() => setShowCustomize(true)} className="px-2 md:px-3">
             <Palette className="w-4 h-4" />
             <span className="hidden sm:inline ml-1">Customize</span>
@@ -353,6 +409,7 @@ export default function ModuleDetailScreen({ moduleId, onBack, onNavigate }) {
                 flashcard={card}
                 onVoiceQuiz={(card) => onNavigate?.('voice_quiz', moduleId, card, module?.name)}
                 onTextQuiz={(card) => onNavigate?.('text_quiz', moduleId, card, module?.name)}
+                onMoveClick={setMovingCard}
                 onDelete={handleDeleteFlashcard}
                 isDeleting={deletingId === card.id}
                 onSaveImage={handleSaveImage}
@@ -361,6 +418,46 @@ export default function ModuleDetailScreen({ moduleId, onBack, onNavigate }) {
           )}
         </div>
       </main>
+
+      {movingCard && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/60" onClick={() => setMovingCard(null)} />
+          <div className="relative w-full max-w-md bg-white rounded-2xl p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-extrabold text-text-primary">Move Flashcard</h3>
+              <button onClick={() => setMovingCard(null)} className="w-8 h-8 rounded-full bg-bg-muted flex items-center justify-center text-text-secondary hover:bg-bg-hover">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-sm text-text-secondary mb-4">
+              Select a module to move this flashcard to:
+            </p>
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+              {allModules.filter(m => m.id !== moduleId).length === 0 ? (
+                <div className="text-sm text-text-muted text-center py-4">No other modules available.</div>
+              ) : (
+                allModules
+                  .filter(m => m.id !== moduleId)
+                  .map(m => (
+                    <div
+                      key={m.id}
+                      onClick={() => handleMoveFlashcard(m.id)}
+                      className="flex items-center gap-3 p-3 rounded-xl border border-border hover:border-primary hover:bg-primary-lighter cursor-pointer transition-colors"
+                    >
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold"
+                        style={{ backgroundColor: m.color || '#FEE500' }}
+                      >
+                        {(() => { const Icon = ICON_MAP[m.icon]; return Icon ? <Icon className="w-4 h-4 text-[#111]" /> : <span className="text-[#111]">{(m.name || 'M').charAt(0).toUpperCase()}</span> })()}
+                      </div>
+                      <span className="font-semibold text-text-primary">{m.name}</span>
+                    </div>
+                  ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
